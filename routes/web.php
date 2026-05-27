@@ -5,7 +5,8 @@ use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\OrganizerController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClientController;
-use App\Http\Controllers\CalendarController; // Добавили импорт
+use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\ReportController; // Добавлен импорт
 
 // --- АВТОРИЗАЦИЯ И ГЛАВНАЯ ---
 Route::get('/', [AuthController::class, 'showLogin'])->name('login');
@@ -41,13 +42,17 @@ Route::prefix('organizer')->name('organizer.')->group(function () {
     Route::get('/concert/{id}/seats-data', [OrganizerController::class, 'getSeatsData'])->name('concert.seats.data');
 
     Route::get('/calendar', [OrganizerController::class, 'calendar'])->name('calendar');
+
+    // НОВЫЕ МАРШРУТЫ ДЛЯ ЗАВЕРШЕННЫХ КОНЦЕРТОВ И ОТЧЕТОВ
+    Route::get('/completed', [ReportController::class, 'completedIndex'])->name('completed');
+    Route::get('/report/export/{id}', [ReportController::class, 'exportPdf'])->name('export.pdf');
 });
 
 // --- ПАРТНЕРЫ ---
 Route::prefix('partner')->name('partner.')->group(function () {
     Route::get('/profile', [PartnerController::class, 'profile'])->name('profile');
     
-    // ИСПРАВЛЕНО: теперь имя будет partner.profile.update
+    // ИСПРАВЛЕНИЕ: убрал дублирующий префикс 'partner.' из имени
     Route::post('/profile/update/{id}', [PartnerController::class, 'update'])->name('profile.update');
     
     Route::get('/requests', [PartnerController::class, 'requests'])->name('requests');

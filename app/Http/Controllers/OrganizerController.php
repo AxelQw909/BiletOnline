@@ -140,4 +140,29 @@ class OrganizerController extends Controller
     {
     return view('organizer.calendar');
     }
+    public function completedConcerts()
+{
+    // Получаем концерты, которые уже прошли
+    $concerts = Concert::where('date_time', '<', now())
+        ->with(['hall.partner', 'tickets']) // Предполагаем, что есть связь с билетами
+        ->get()
+        ->map(function ($concert) {
+            $sold = $concert->tickets->where('status', 'sold')->count();
+            $total = $concert->hall->capacity ?? 0;
+            $price = $concert->ticket_price ?? 0;
+            
+            return [
+                'id' => $concert->id,
+                'title' => $concert->title,
+                'hall' => $concert->hall->name ?? 'Без зала',
+                'partner' => $concert->hall->partner->company_name ?? 'Без площадки',
+                'date' => $concert->date_time,
+                'sold' => $sold,
+                'revenue' => $sold * $price,
+                'unsold' => max(0, $total - $sold)
+            ];
+        });
+
+    return view('organizer.completed', compact('concerts'));
+}
 }

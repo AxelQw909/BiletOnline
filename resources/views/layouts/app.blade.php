@@ -28,9 +28,8 @@
                         <a href="{{ route('organizer.profile') }}" class="hover:text-zinc-950 transition">Мой профиль</a>
                         <a href="{{ route('organizer.platforms') }}" class="hover:text-zinc-950 transition">Площадки</a>
                         <a href="{{ route('organizer.concerts') }}" class="hover:text-zinc-950 transition">Будущие концерты</a>
-                        <a href="{{ route('organizer.calendar') }}" class="text-zinc-600 hover:text-zinc-900 font-bold uppercase text-xs tracking-wider">
-    Календарь мероприятий
-</a>
+                        <a href="{{ route('organizer.completed') }}" class="hover:text-zinc-950 transition">Завершенные концерты</a>
+                        <a href="{{ route('organizer.calendar') }}" class="hover:text-zinc-950 transition">Календарь мероприятий</a>
                         <a href="{{ route('organizer.tickets.search') }}" class="hover:text-zinc-950 transition">Поиск билета</a>
                     @endif
                     

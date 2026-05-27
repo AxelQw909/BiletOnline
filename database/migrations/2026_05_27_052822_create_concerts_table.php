@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->string('title');
             $table->string('dk_title')->nullable(); // От какого ДК
             $table->dateTime('date_time');
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->enum('status', ['pending', 'approved', 'rejected', 'completed'])->default('pending');
             $table->decimal('base_price', 10, 2)->default(0);
             $table->json('custom_prices')->nullable(); // Исключения по ценам для конкретных мест
             $table->text('payment_info')->nullable(); // Инфо об оплате

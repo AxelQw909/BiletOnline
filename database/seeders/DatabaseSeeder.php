@@ -13,105 +13,76 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Вспомогательная функция для генерации схемы зала
         $generateSchema = function($rows, $seatsInRow, $aisleColumn) {
             $schema = [];
             for ($r = 1; $r <= $rows; $r++) {
                 for ($s = 1; $s <= $seatsInRow; $s++) {
-                    $type = ($s == $aisleColumn) ? 'aisle' : 'seat';
-                    $schema[] = ['row' => $r, 'seat' => $s, 'type' => $type];
+                    $schema[] = ['row' => $r, 'seat' => $s, 'type' => ($s == $aisleColumn) ? 'aisle' : 'seat'];
                 }
             }
             return $schema;
         };
 
-        // 1. МИДиС (Главный партнер)
-        $midis = User::create([
-            'name' => 'Администрация МИДиС',
-            'email' => 'midis@partner.com',
-            'password' => Hash::make('password'),
-            'role' => 'partner',
-            'company_name' => 'Образовательный комплекс МИДиС',
-            'address' => 'ул. Ворошилова, д. 4',
-            'phone' => '+73512251010'
-        ]);
-
-        // Список челябинских площадок
+        // --- 1. ПАРТНЕРЫ (Челябинские ДК) ---
         $partnersData = [
-            ['name' => 'Администратор филармонии', 'email' => 'filarmonia@partner.com', 'company' => 'Челябинская государственная филармония', 'address' => 'ул. Труда, 92А'],
-            ['name' => 'Администратор ДК ЖД', 'email' => 'dkzd@partner.com', 'company' => 'ДК Железнодорожников', 'address' => 'ул. Цвиллинга, 54'],
-            ['name' => 'Администратор Театра Драмы', 'email' => 'drama@partner.com', 'company' => 'Театр драмы им. Наума Орлова', 'address' => 'пл. Революции, 6'],
-            ['name' => 'Администратор МТС Live Холл', 'email' => 'mts@partner.com', 'company' => 'МТС Live Холл', 'address' => 'ул. Труда, 181'],
-            ['name' => 'Администратор ДК ЧМК', 'email' => 'dkcmk@partner.com', 'company' => 'ДК ЧМК', 'address' => 'ул. Ярослава Гашека, 1'],
+            ['name' => 'Директор ДК ЖД', 'email' => 'dkzd@mail.ru', 'company' => 'ДК Железнодорожников', 'address' => 'ул. Цвиллинга, 54'],
+            ['name' => 'Администратор Театра Драмы', 'email' => 'drama@mail.ru', 'company' => 'Театр драмы им. Наума Орлова', 'address' => 'пл. Революции, 6'],
+            ['name' => 'Директор ДК ЧМК', 'email' => 'dkcmk@mail.ru', 'company' => 'ДК ЧМК', 'address' => 'ул. Ярослава Гашека, 1'],
+            ['name' => 'Администратор Gold Arena', 'email' => 'gold@gmail.com', 'company' => 'Gold Event Hall', 'address' => 'ул. Ленина, 10']
         ];
 
-        $partners = [$midis];
+        $halls = [];
         foreach ($partnersData as $data) {
-            $partners[] = User::create([
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'password' => Hash::make('password'),
-                'role' => 'partner',
-                'company_name' => $data['company'],
-                'address' => $data['address'],
-                'phone' => '+7351' . rand(1000000, 9999999)
+            $user = User::create([
+                'name' => $data['name'], 'email' => $data['email'],
+                'password' => Hash::make('password'), 'role' => 'partner',
+                'company_name' => $data['company'], 'address' => $data['address'], 'phone' => '+7351' . rand(1000000, 9999999)
             ]);
+            $halls[] = Hall::create(['user_id' => $user->id, 'name' => 'Основной зал ' . $data['company'], 'address' => $data['address'], 'capacity' => 200, 'schema' => $generateSchema(10, 20, 10)]);
         }
 
-        // 2. Создаем залы
-        $midisBig = Hall::create([
-            'user_id' => $midis->id,
-            'name' => 'Конгресс-холл МИДиС',
-            'address' => 'ул. Ворошилова, 4',
-            'capacity' => 440,
-            'schema' => $generateSchema(20, 23, 12)
+        // --- 2. ОРГАНИЗАТОР ---
+        $org = User::create([
+            'name' => 'Алексей Иванов', 'email' => 'org@gmail.com',
+            'password' => Hash::make('password'), 'role' => 'organizer',
+            'company_name' => 'ООО Творческий Союз', 'phone' => '+79001112233'
         ]);
 
-        foreach ($partners as $partner) {
-            if ($partner->id === $midis->id) continue;
-            Hall::create([
-                'user_id' => $partner->id,
-                'name' => 'Основной зал ' . $partner->company_name,
-                'address' => $partner->address,
-                'capacity' => 200,
-                'schema' => $generateSchema(10, 20, 10)
+        // --- 3. КОНЦЕРТЫ (Много данных для отчетов) ---
+        $paymentMethods = ['Оплата онлайн', 'Оплата в кассе на месте', 'Оплата переводом по номеру'];
+        $concertsData = [
+            ['title' => 'Отчетный концерт ансамбля "Урал"', 'date' => now()->subDays(20), 'status' => 'completed'],
+            ['title' => 'Концерт коллектива Фантазия', 'date' => now()->subDays(5), 'status' => 'completed'],
+            ['title' => 'Концерт детской филармонии', 'date' => now()->subDays(2), 'status' => 'completed'],
+            ['title' => 'Детский фестиваль "Лучики"', 'date' => now()->subDays(1), 'status' => 'completed'],
+            ['title' => 'Большой весенний бал', 'date' => now()->addDays(5), 'status' => 'approved'],
+            
+        ];
+
+        foreach ($concertsData as $index => $cData) {
+            $concert = Concert::create([
+                'user_id' => $org->id,
+                'hall_id' => $halls[array_rand($halls)]->id,
+                'title' => $cData['title'],
+                'date_time' => $cData['date'],
+                'status' => $cData['status'],
+                'base_price' => rand(500, 2000),
+                'payment_info' => $paymentMethods[array_rand($paymentMethods)]
             ]);
+
+            // Генерируем 5-10 билетов на каждый концерт
+            for ($i = 0; $i < rand(5, 10); $i++) {
+                Ticket::create([
+                    'concert_id' => $concert->id,
+                    'ticket_code' => 'TKT-' . rand(1000, 9999),
+                    'row' => rand(1, 5), 'seat' => rand(1, 20),
+                    'price' => $concert->base_price,
+                    'customer_name' => 'Клиент ' . $i,
+                    'customer_email' => 'client' . $i . '@mail.ru',
+                    'customer_phone' => '+79000000000',
+                    'status' => 'sold'
+                ]);
+            }
         }
-
-        // 3. Создаем Организаторов
-        $org1 = User::create([
-            'name' => 'Ивент Агентство "Челябинск-Шоу"',
-            'email' => 'chelshow@org.com',
-            'password' => Hash::make('password'),
-            'role' => 'organizer',
-            'company_name' => 'ООО Челябинск-Шоу',
-            'phone' => '+79510001122'
-        ]);
-
-        // 4. Добавляем концерт
-        $concert = Concert::create([
-            'user_id' => $org1->id,
-            'hall_id' => $midisBig->id,
-            'title' => 'Большой весенний концерт в МИДиС',
-            'dk_title' => 'Конгресс-холл МИДиС',
-            'date_time' => now()->addDays(14)->setTime(18, 0),
-            'status' => 'approved',
-            'base_price' => 800.00,
-            'custom_prices' => [],
-            'payment_info' => 'Оплата онлайн или в кассе конгресс-холла'
-        ]);
-
-        // Генерируем тестовый билет с обязательным полем customer_phone
-        Ticket::create([
-            'concert_id'     => $concert->id,
-            'ticket_code'    => 'CH74001',
-            'row'            => 1,
-            'seat'           => 1,
-            'price'          => 800.00,
-            'customer_name'  => 'Иван Иванов',
-            'customer_email' => 'test@example.com',
-            'customer_phone' => '+79001234567', // Добавлено поле
-            'status'         => 'paid'
-        ]);
     }
 }
