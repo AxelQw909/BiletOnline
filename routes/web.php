@@ -5,6 +5,7 @@ use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\OrganizerController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\CalendarController; // Добавили импорт
 
 // --- АВТОРИЗАЦИЯ И ГЛАВНАЯ ---
 Route::get('/', [AuthController::class, 'showLogin'])->name('login');
@@ -38,6 +39,8 @@ Route::prefix('organizer')->name('organizer.')->group(function () {
     Route::get('/concert/view/{id}', [OrganizerController::class, 'viewConcert'])->name('concert.view');
     Route::get('/concert/{id}/seats', [OrganizerController::class, 'getSeatsStatus'])->name('concert.seats');
     Route::get('/concert/{id}/seats-data', [OrganizerController::class, 'getSeatsData'])->name('concert.seats.data');
+
+    Route::get('/calendar', [OrganizerController::class, 'calendar'])->name('calendar');
 });
 
 // --- ПАРТНЕРЫ ---
@@ -62,3 +65,6 @@ Route::prefix('partner')->name('partner.')->group(function () {
 // --- ПУБЛИЧНЫЕ МАРШРУТЫ (Клиенты) ---
 Route::get('/concert/{id}', [ClientController::class, 'show'])->name('client.concert');
 Route::post('/concert/{id}/book', [ClientController::class, 'bookTicket'])->name('client.book');
+
+// --- КАЛЕНДАРЬ ЗАНЯТОСТИ ---
+Route::get('/api/concerts', [CalendarController::class, 'getConcerts'])->name('api.concerts');

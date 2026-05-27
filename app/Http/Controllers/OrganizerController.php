@@ -136,4 +136,8 @@ class OrganizerController extends Controller
 
         return back()->with('success', 'Статус билета успешно обновлен!');
     }
+    public function calendar()
+    {
+    return view('organizer.calendar');
+    }
 }
