@@ -44,7 +44,8 @@
                                                class="block w-full py-3 rounded-xl bg-zinc-900 text-white text-center font-bold text-xs uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95">
                                                 Арендовать
                                             </a>
-                                            <button onclick="openModal('{{ $hall->name }}', {{ json_encode($hall->schema) }}, '{{ route('organizer.hall.rent', $hall->id) }}')" 
+                                            {{-- Используем json_encode для надежной передачи данных --}}
+                                            <button onclick="openModal('{{ addslashes($hall->name) }}', {{ $hall->rows->load('seats')->toJson() }}, '{{ route('organizer.hall.rent', $hall->id) }}')" 
                                                     class="block w-full py-3 rounded-xl bg-zinc-100 text-zinc-900 text-center font-bold text-xs uppercase tracking-widest hover:bg-zinc-200 transition-all active:scale-95">
                                                 Посмотреть схему
                                             </button>
@@ -66,7 +67,7 @@
             <h3 id="modalTitle" class="text-xl font-bold uppercase">Схема зала</h3>
             <button onclick="closeModal()" class="text-zinc-400 hover:text-zinc-900 text-2xl">×</button>
         </div>
-        <div id="modalContent" class="bg-zinc-50 p-6 rounded-2xl mb-6 overflow-x-auto flex items-center justify-center min-h-[300px]"></div>
+        <div id="modalContent" class="bg-zinc-50 p-6 rounded-2xl mb-6 flex flex-col items-center gap-2 overflow-x-auto min-h-[200px]"></div>
         <div class="flex gap-4">
             <button onclick="closeModal()" class="flex-1 py-3 bg-zinc-100 rounded-xl font-bold hover:bg-zinc-200 uppercase text-xs tracking-widest">Назад</button>
             <a id="btnRent" href="#" class="flex-[2] py-3 bg-indigo-600 text-white text-center rounded-xl font-bold uppercase text-xs tracking-widest hover:bg-indigo-700">Арендовать зал</a>
@@ -75,36 +76,39 @@
 </div>
 
 <script>
-    function openModal(name, schema, rentUrl) {
+    function openModal(name, rows, rentUrl) {
+        console.log('Opening modal for:', name, rows);
         document.getElementById('modalTitle').innerText = 'Схема: ' + name;
         document.getElementById('btnRent').href = rentUrl;
         const container = document.getElementById('modalContent');
         container.innerHTML = '';
         
-        const maxSeat = Math.max(...schema.filter(i => i.row === 1).map(i => i.seat));
-        container.style.display = 'grid';
-        container.style.gridTemplateColumns = `repeat(${maxSeat}, minmax(32px, 1fr))`;
-        container.style.gap = '4px';
+        if (!rows || rows.length === 0) {
+            container.innerHTML = '<p class="text-zinc-400">Схема не задана</p>';
+        } else {
+            rows.forEach(row => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = "flex gap-2";
+                
+                row.seats.forEach(seat => {
+                    const cell = document.createElement('div');
+                    if (seat.type === 'seat') {
+                        cell.className = "h-8 w-8 text-[9px] flex items-center justify-center rounded bg-zinc-900 text-white font-bold";
+                        cell.innerText = seat.number;
+                    } else {
+                        cell.className = "h-8 w-8 rounded bg-transparent border border-zinc-200";
+                    }
+                    rowDiv.appendChild(cell);
+                });
+                container.appendChild(rowDiv);
+            });
+        }
 
-        let currentRow = -1;
-        let seatCounter = 0;
-
-        schema.forEach(item => {
-            if (item.row !== currentRow) { currentRow = item.row; seatCounter = 0; }
-            
-            const cell = document.createElement('div');
-            if (item.type === 'seat') {
-                seatCounter++;
-                cell.className = "h-8 w-8 text-[9px] flex items-center justify-center rounded bg-zinc-900 text-white font-bold";
-                cell.innerText = seatCounter;
-            } else {
-                cell.className = "h-8 w-8 rounded bg-white border border-zinc-200";
-            }
-            container.appendChild(cell);
-        });
         document.getElementById('hallModal').classList.remove('hidden');
     }
 
-    function closeModal() { document.getElementById('hallModal').classList.add('hidden'); }
+    function closeModal() { 
+        document.getElementById('hallModal').classList.add('hidden'); 
+    }
 </script>
 @endsection

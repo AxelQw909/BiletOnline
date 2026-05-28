@@ -43,7 +43,6 @@
     </button>
 </div>
 
-{{-- Модальное окно --}}
 <div id="modal" class="fixed inset-0 bg-black/30 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
     <div class="bg-white w-full max-w-5xl rounded-3xl shadow-2xl flex flex-col md:flex-row">
         <div class="w-full md:w-1/2 p-10 border-r border-zinc-100">
@@ -94,40 +93,39 @@
         let timerInterval;
 
         const container = document.getElementById('gridContainer');
-        const rows = [...new Set(concert.hall.schema.map(i => i.row))].sort((a, b) => a - b);
         
-        rows.forEach(rowNum => {
+        concert.hall.rows.forEach(row => {
             const rowWrapper = document.createElement('div');
             rowWrapper.className = "flex items-center gap-2";
             const label = document.createElement('div');
             label.className = "row-label";
-            label.innerText = rowNum;
+            label.innerText = row.number;
             rowWrapper.appendChild(label);
 
             const seatGroup = document.createElement('div');
             seatGroup.className = "flex gap-2";
             
-            concert.hall.schema.filter(i => i.row == rowNum).forEach(item => {
-                if (item.type === 'aisle') {
+            row.seats.forEach(seat => {
+                if (seat.type === 'aisle') {
                     const aisle = document.createElement('div');
                     aisle.className = "w-[70px] h-[70px]";
                     seatGroup.appendChild(aisle);
                 } else {
-                    const isBooked = concert.tickets.find(t => t.row == item.row && t.seat == item.seat && t.status !== 'cancelled');
-                    const price = (concert.custom_prices || {})[`${item.row}-${item.seat}`] || parseFloat(concert.base_price);
+                    const isBooked = concert.tickets.find(t => t.seat_id == seat.id && t.status !== 'cancelled');
+                    const price = parseFloat(concert.base_price);
                     
                     const cell = document.createElement('div');
                     cell.className = `seat-cell rounded-xl cursor-pointer font-bold ${isBooked ? 'bg-booked' : 'bg-free hover:bg-zinc-100'}`;
-                    cell.innerHTML = `<span class="text-lg">${item.seat}</span><span class="text-[10px] opacity-60">${price}₽</span>`;
+                    cell.innerHTML = `<span class="text-lg">${seat.number}</span><span class="text-[10px] opacity-60">${price}₽</span>`;
                     
                     if (!isBooked) {
                         cell.addEventListener('click', () => {
-                            const idx = selectedSeats.findIndex(s => s.row == item.row && s.seat == item.seat);
+                            const idx = selectedSeats.findIndex(s => s.seat_id == seat.id);
                             if (idx > -1) {
                                 selectedSeats.splice(idx, 1);
                                 cell.classList.remove('bg-selected');
                             } else {
-                                selectedSeats.push({ row: item.row, seat: item.seat, price: price });
+                                selectedSeats.push({ seat_id: seat.id, row: row.number, seat: seat.number, price: price });
                                 cell.classList.add('bg-selected');
                             }
                             document.getElementById('btnContinue').disabled = selectedSeats.length === 0;
@@ -174,7 +172,8 @@
                         customer_name: e.target.customer_name.value,
                         customer_email: e.target.customer_email.value,
                         customer_phone: e.target.customer_phone.value,
-                        seats: selectedSeats
+                        // Отправляем row и seat, которые требует ваша таблица в БД
+                        seats: selectedSeats.map(s => ({ row: s.row, seat: s.seat, price: s.price }))
                     })
                 });
 
@@ -190,7 +189,7 @@
                 }
             } catch (err) {
                 console.error('Ошибка:', err);
-                alert('Произошла критическая ошибка. Проверьте консоль (F12).');
+                alert('Произошла критическая ошибка.');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerText = 'Забронировать';

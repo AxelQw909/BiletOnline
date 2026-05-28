@@ -6,14 +6,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class Hall extends Model
 {
-    protected $fillable = ['user_id', 'name', 'address', 'capacity', 'schema'];
+    // Убрали 'schema' из $fillable, так как колонки больше нет
+    protected $fillable = ['user_id', 'name', 'address', 'capacity'];
 
-    protected $casts = [
-        'schema' => 'array', // Автоматическое преобразование JSON в массив
-    ];
+    // Убрали protected $casts для 'schema', так как этого поля больше нет
 
     public function partner()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    // Связь с рядами (теперь это основной способ получения данных о месте)
+    public function rows() 
+    { 
+        return $this->hasMany(Row::class); 
     }
 }

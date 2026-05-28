@@ -2,9 +2,9 @@
 @section('title', $concert->title . ' — Управление')
 
 @section('content')
-{{-- Безопасная передача данных через атрибуты --}}
+{{-- Передаем ряды с вложенными местами и билеты --}}
 <div id="viewData" 
-     data-schema='@json($concert->hall->schema)' 
+     data-rows='@json($concert->hall->rows->load("seats"))' 
      data-tickets='@json($concert->tickets)' 
      data-price='{{ $concert->base_price }}' 
      data-custom='@json($concert->custom_prices ?? [])' 
@@ -13,7 +13,6 @@
 
 <div class="w-full px-6 py-10 bg-zinc-50 min-h-screen space-y-8">
     
-    {{-- Заголовок и управление --}}
     <div class="bg-white p-8 rounded-3xl border border-zinc-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h2 class="text-3xl font-extrabold text-zinc-900 tracking-tight uppercase">{{ $concert->title }}</h2>
@@ -27,7 +26,6 @@
         </button>
     </div>
 
-    {{-- Схема зала --}}
     <div class="bg-white p-8 rounded-3xl border border-zinc-100 shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div class="flex items-center gap-6">
@@ -53,7 +51,7 @@
     document.addEventListener("DOMContentLoaded", function() {
         const el = document.getElementById('viewData');
         const concertId = el.dataset.concertId;
-        const hallSchema = JSON.parse(el.dataset.schema);
+        const rows = JSON.parse(el.dataset.rows);
         const basePrice = parseFloat(el.dataset.price);
         const customPrices = JSON.parse(el.dataset.custom);
 
@@ -62,32 +60,29 @@
         function renderSchema(tickets) {
             container.innerHTML = '';
             
-            const rows = [...new Set(hallSchema.map(i => i.row))].sort((a,b) => a - b);
-            const maxSeat = Math.max(...hallSchema.map(i => i.seat));
-            
-            // Настройка сетки: номер ряда + места
-            container.style.gridTemplateColumns = `40px repeat(${maxSeat}, minmax(56px, 1fr))`;
+            // Находим максимальное кол-во мест для сетки
+            const maxSeats = Math.max(...rows.map(r => r.seats.length));
+            container.style.gridTemplateColumns = `40px repeat(${maxSeats}, minmax(56px, 1fr))`;
 
-            rows.forEach(rowNum => {
+            rows.sort((a, b) => a.number - b.number).forEach(row => {
                 const rowLabel = document.createElement('div');
                 rowLabel.className = "flex items-center justify-center font-bold text-zinc-400 w-10 text-[10px]";
-                rowLabel.innerText = "Ряд " + rowNum;
+                rowLabel.innerText = "Ряд " + row.number;
                 container.appendChild(rowLabel);
 
-                const rowItems = hallSchema.filter(i => i.row === rowNum);
-                rowItems.forEach(item => {
+                row.seats.sort((a, b) => a.number - b.number).forEach(seat => {
                     const cell = document.createElement('div');
-                    cell.id = `seat-${item.row}-${item.seat}`;
+                    cell.id = `seat-${seat.id}`;
                     
-                    if (item.type === 'aisle') {
+                    if (seat.type === 'aisle' || seat.type === 'empty') {
                         cell.className = "h-14 w-14";
                     } else {
-                        const key = `${item.row}-${item.seat}`;
-                        const hasTicket = tickets.find(t => t.row == item.row && t.seat == item.seat);
-                        const price = customPrices[key] !== undefined ? customPrices[key] : basePrice;
+                        const hasTicket = tickets.find(t => t.seat_id == seat.id);
+                        // Используем ID для custom_prices
+                        const price = customPrices[`seat-${seat.id}`] !== undefined ? customPrices[`seat-${seat.id}`] : basePrice;
                         
                         cell.className = `h-14 w-14 rounded-xl flex flex-col items-center justify-center text-[9px] transition-all duration-500 ${hasTicket ? 'bg-red-500 text-white' : 'bg-zinc-900 text-white'}`;
-                        cell.innerHTML = `<span class="opacity-75">${item.seat}</span><span class="font-bold text-xs">${hasTicket ? 'ЗАНЯТО' : price+'₽'}</span>`;
+                        cell.innerHTML = `<span class="opacity-75">${seat.number}</span><span class="font-bold text-xs">${hasTicket ? 'ЗАНЯТО' : price+'₽'}</span>`;
                     }
                     container.appendChild(cell);
                 });
@@ -100,7 +95,7 @@
                 const tickets = await response.json();
                 
                 tickets.forEach(ticket => {
-                    const cell = document.getElementById(`seat-${ticket.row}-${ticket.seat}`);
+                    const cell = document.getElementById(`seat-${ticket.seat_id}`);
                     if (cell && !cell.classList.contains('bg-red-500')) {
                         cell.className = "h-14 w-14 rounded-xl flex flex-col items-center justify-center text-[9px] bg-red-500 text-white transition-all duration-500";
                         cell.querySelector('.font-bold').innerText = 'ЗАНЯТО';

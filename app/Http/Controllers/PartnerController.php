@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Hall;
 use App\Models\User;
-use App\Models\Concert; // Добавили импорт модели Concert
+use App\Models\Concert;
+use App\Models\Row;
+use App\Models\Seat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PartnerController extends Controller
 {
@@ -31,45 +34,26 @@ class PartnerController extends Controller
         return view('partner.requests', compact('concerts'));
     }
 
-    /**
-     * Обновление статуса заявки (НОВЫЙ МЕТОД)
-     */
     public function updateStatus(Request $request, $id)
     {
         $concert = Concert::findOrFail($id);
-        
-        $request->validate([
-            'status' => 'required|in:approved,rejected',
-        ]);
-
-        $concert->update([
-            'status' => $request->status,
-        ]);
-
+        $request->validate(['status' => 'required|in:approved,rejected']);
+        $concert->update(['status' => $request->status]);
         return back()->with('success', 'Статус заявки успешно изменен!');
     }
 
-    /**
-     * Обновление данных профиля
-     */
     public function update(Request $request, $id)
     {
         $partner = User::findOrFail($id);
-        
         $validated = $request->validate([
             'company_name' => 'required|string|max:255',
             'address'      => 'required|string|max:255',
             'phone'        => 'required|string|max:20',
         ]);
-
         $partner->update($validated);
-
         return back()->with('success', 'Данные профиля обновлены');
     }
 
-    /**
-     * Страница создания зала
-     */
     public function createHall()
     {
         return view('partner.hall_create');
@@ -84,26 +68,37 @@ class PartnerController extends Controller
             'name'     => 'required|string|max:255',
             'address'  => 'required|string|max:255',
             'capacity' => 'required|integer',
-            'schema'   => 'required|json',
+            'schema'   => 'required|json', // Ожидаем JSON от фронтенда
         ]);
 
-        Hall::create([
-            'user_id'  => Auth::id(),
-            'name'     => $data['name'],
-            'address'  => $data['address'],
-            'capacity' => $data['capacity'],
-            'schema'   => json_decode($data['schema'], true),
-        ]);
+        DB::transaction(function () use ($data) {
+            $hall = Hall::create([
+                'user_id'  => Auth::id(),
+                'name'     => $data['name'],
+                'address'  => $data['address'],
+                'capacity' => $data['capacity'],
+            ]);
+
+            $schema = json_decode($data['schema'], true);
+            foreach ($schema as $item) {
+                $row = Row::firstOrCreate(['hall_id' => $hall->id, 'number' => $item['row']]);
+                Seat::create([
+                    'row_id' => $row->id,
+                    'number' => $item['seat'],
+                    'type'   => $item['type']
+                ]);
+            }
+        });
 
         return redirect()->route('partner.profile')->with('success', 'Зал успешно создан');
     }
 
     /**
-     * Страница редактирования зала
+     * Редактирование зала (подгружаем ряды и места)
      */
     public function editHall($id)
     {
-        $hall = Hall::where('user_id', Auth::id())->findOrFail($id);
+        $hall = Hall::where('user_id', Auth::id())->with('rows.seats')->findOrFail($id);
         return view('partner.hall_editor', compact('hall'));
     }
 
@@ -121,12 +116,27 @@ class PartnerController extends Controller
             'schema'   => 'required|json',
         ]);
 
-        $hall->update([
-            'name'     => $data['name'],
-            'address'  => $data['address'],
-            'capacity' => $data['capacity'],
-            'schema'   => json_decode($data['schema'], true),
-        ]);
+        DB::transaction(function () use ($hall, $data) {
+            $hall->update([
+                'name'     => $data['name'],
+                'address'  => $data['address'],
+                'capacity' => $data['capacity'],
+            ]);
+
+            // Удаляем старые ряды (каскадное удаление мест произойдет, если в миграции указано ON DELETE CASCADE)
+            // Если нет — лучше явно вызвать $hall->rows()->each(fn($r) => $r->seats()->delete());
+            $hall->rows()->delete();
+            
+            $schema = json_decode($data['schema'], true);
+            foreach ($schema as $item) {
+                $row = Row::firstOrCreate(['hall_id' => $hall->id, 'number' => $item['row']]);
+                Seat::create([
+                    'row_id' => $row->id,
+                    'number' => $item['seat'],
+                    'type'   => $item['type']
+                ]);
+            }
+        });
 
         return redirect()->route('partner.profile')->with('success', 'Зал успешно обновлен');
     }

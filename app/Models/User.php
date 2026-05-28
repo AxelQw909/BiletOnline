@@ -18,15 +18,15 @@ class User extends Authenticatable
         'password', 'remember_token',
     ];
 
-    // Залы, принадлежащие партнеру
+    
+
     public function halls()
     {
-        return $this->hasMany(Hall::class);
+        return $this->hasMany(Hall::class, 'user_id');
     }
 
-    // Концерты, организованные организатором
     public function concerts()
     {
-        return $this->hasMany(Concert::class);
+        return $this->hasMany(Concert::class, 'user_id');
     }
 }

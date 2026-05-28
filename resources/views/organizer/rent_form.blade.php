@@ -7,8 +7,8 @@
         <h2 class="text-3xl font-extrabold text-zinc-900 tracking-tight uppercase">Подача заявки: {{ $hall->name }}</h2>
     </header>
 
-    {{-- Скрытые контейнеры для данных --}}
-    <div id="dataContainer" data-schema='@json($hall->schema)' class="hidden"></div>
+    {{-- Передаем данные как JSON через атрибут, подгружая связь seats --}}
+    <div id="dataContainer" data-rows='@json($hall->rows->load('seats'))' class="hidden"></div>
     <div id="bookedDates" data-dates='@json($bookedDates)' class="hidden"></div>
 
     <form action="{{ route('organizer.hall.rent.submit', $hall->id) }}" method="POST" id="rentForm" class="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -54,7 +54,6 @@
                 @endif
             </div>
 
-            {{-- Обертка для центрирования --}}
             <div class="w-full border border-zinc-100 p-8 bg-white rounded-3xl shadow-sm overflow-x-auto flex justify-center">
                 <div id="pricingGrid" class="inline-grid gap-2"></div>
             </div>
@@ -64,35 +63,41 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const hallSchema = JSON.parse(document.getElementById('dataContainer').dataset.schema);
+        const rowsData = JSON.parse(document.getElementById('dataContainer').dataset.rows);
         let customPrices = {};
         const basePriceInput = document.getElementById('basePriceInput');
 
         function renderPricingGrid() {
             const container = document.getElementById('pricingGrid');
             container.innerHTML = '';
-            const basePrice = basePriceInput.value || 0;
+            const basePrice = parseFloat(basePriceInput.value) || 0;
             
-            const rows = [...new Set(hallSchema.map(i => i.row))].sort((a,b) => a - b);
-            
-            rows.forEach(rowNum => {
+            // Находим максимальное количество мест в ряду для сетки
+            let maxSeats = 0;
+            rowsData.forEach(r => { if(r.seats.length > maxSeats) maxSeats = r.seats.length; });
+
+            rowsData.sort((a,b) => a.number - b.number).forEach(row => {
+                // Метка ряда
                 const rowLabel = document.createElement('div');
                 rowLabel.className = "flex items-center justify-center font-bold text-zinc-400 w-10 text-xs";
-                rowLabel.innerText = "Ряд " + rowNum;
+                rowLabel.innerText = "Ряд " + row.number;
                 container.appendChild(rowLabel);
 
-                const rowItems = hallSchema.filter(i => i.row === rowNum);
-                rowItems.forEach(item => {
+                row.seats.sort((a,b) => a.number - b.number).forEach(seat => {
                     const cell = document.createElement('div');
-                    if (item.type === 'aisle') {
+                    
+                    if (seat.type === 'aisle' || seat.type === 'empty') {
                         cell.className = "h-14 w-14";
                     } else {
-                        const key = `${item.row}-${item.seat}`;
+                        const key = `seat-${seat.id}`;
                         const price = customPrices[key] !== undefined ? customPrices[key] : basePrice;
-                        cell.className = `h-14 w-14 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all border-2 ${customPrices[key] ? 'bg-amber-500 border-amber-600 text-white' : 'bg-zinc-900 border-zinc-800 text-white'} hover:opacity-80`;
-                        cell.innerHTML = `<span class="text-[10px] opacity-75">${item.seat}</span><span class="font-bold text-xs">${price}₽</span>`;
+                        
+                        cell.className = `h-14 w-14 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all border-2 
+                            ${customPrices[key] ? 'bg-amber-500 border-amber-600 text-white' : 'bg-zinc-900 border-zinc-800 text-white'} hover:opacity-80`;
+                        
+                        cell.innerHTML = `<span class="text-[10px] opacity-75">${seat.number}</span><span class="font-bold text-xs">${price}₽</span>`;
                         cell.onclick = () => {
-                            const val = prompt('Введите цену для места ' + item.row + '-' + item.seat + ':', price);
+                            const val = prompt('Введите цену для места №' + seat.number + ' (Ряд ' + row.number + '):', price);
                             if (val !== null) { 
                                 customPrices[key] = parseFloat(val); 
                                 renderPricingGrid(); 
@@ -103,9 +108,7 @@
                 });
             });
 
-            const maxCols = Math.max(...hallSchema.map(i => i.seat));
-            // Добавляем 40px для ширины метки ряда
-            container.style.gridTemplateColumns = `40px repeat(${maxCols}, minmax(56px, 1fr))`;
+            container.style.gridTemplateColumns = `40px repeat(${maxSeats}, minmax(56px, 1fr))`;
             document.getElementById('customPricesInput').value = JSON.stringify(customPrices);
         }
 

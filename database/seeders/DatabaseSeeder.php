@@ -7,22 +7,14 @@ use App\Models\User;
 use App\Models\Hall;
 use App\Models\Concert;
 use App\Models\Ticket;
+use App\Models\Row;
+use App\Models\Seat;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $generateSchema = function($rows, $seatsInRow, $aisleColumn) {
-            $schema = [];
-            for ($r = 1; $r <= $rows; $r++) {
-                for ($s = 1; $s <= $seatsInRow; $s++) {
-                    $schema[] = ['row' => $r, 'seat' => $s, 'type' => ($s == $aisleColumn) ? 'aisle' : 'seat'];
-                }
-            }
-            return $schema;
-        };
-
         // --- 1. ПАРТНЕРЫ (Челябинские ДК) ---
         $partnersData = [
             ['name' => 'Директор ДК ЖД', 'email' => 'dkzd@mail.ru', 'company' => 'ДК Железнодорожников', 'address' => 'ул. Цвиллинга, 54'],
@@ -38,7 +30,27 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make('password'), 'role' => 'partner',
                 'company_name' => $data['company'], 'address' => $data['address'], 'phone' => '+7351' . rand(1000000, 9999999)
             ]);
-            $halls[] = Hall::create(['user_id' => $user->id, 'name' => 'Основной зал ' . $data['company'], 'address' => $data['address'], 'capacity' => 200, 'schema' => $generateSchema(10, 20, 10)]);
+
+            // Создаем зал (без поля schema)
+            $hall = Hall::create([
+                'user_id' => $user->id, 
+                'name' => 'Основной зал ' . $data['company'], 
+                'address' => $data['address'], 
+                'capacity' => 200
+            ]);
+
+            // Создаем структуру рядов и мест в базе данных
+            for ($r = 1; $r <= 10; $r++) {
+                $row = Row::create(['hall_id' => $hall->id, 'number' => $r]);
+                for ($s = 1; $s <= 20; $s++) {
+                    Seat::create([
+                        'row_id' => $row->id, 
+                        'number' => $s, 
+                        'type' => ($s == 10) ? 'aisle' : 'seat'
+                    ]);
+                }
+            }
+            $halls[] = $hall;
         }
 
         // --- 2. ОРГАНИЗАТОР ---
@@ -48,7 +60,7 @@ class DatabaseSeeder extends Seeder
             'company_name' => 'ООО Творческий Союз', 'phone' => '+79001112233'
         ]);
 
-        // --- 3. КОНЦЕРТЫ (Много данных для отчетов) ---
+        // --- 3. КОНЦЕРТЫ ---
         $paymentMethods = ['Оплата онлайн', 'Оплата в кассе на месте', 'Оплата переводом по номеру'];
         $concertsData = [
             ['title' => 'Отчетный концерт ансамбля "Урал"', 'date' => now()->subDays(20), 'status' => 'completed'],
@@ -56,10 +68,9 @@ class DatabaseSeeder extends Seeder
             ['title' => 'Концерт детской филармонии', 'date' => now()->subDays(2), 'status' => 'completed'],
             ['title' => 'Детский фестиваль "Лучики"', 'date' => now()->subDays(1), 'status' => 'completed'],
             ['title' => 'Большой весенний бал', 'date' => now()->addDays(5), 'status' => 'approved'],
-            
         ];
 
-        foreach ($concertsData as $index => $cData) {
+        foreach ($concertsData as $cData) {
             $concert = Concert::create([
                 'user_id' => $org->id,
                 'hall_id' => $halls[array_rand($halls)]->id,

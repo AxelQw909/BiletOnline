@@ -16,7 +16,7 @@ class ClientController extends Controller
     {
         $concert = Concert::where('id', $id)
             ->where('status', 'approved')
-            ->with(['hall', 'tickets'])
+            ->with(['hall.rows.seats', 'tickets']) 
             ->firstOrFail();
             
         return view('client.booking', compact('concert'));
@@ -28,10 +28,10 @@ class ClientController extends Controller
             $concert = Concert::findOrFail($id);
             
             $data = $request->validate([
-                'customer_name' => 'required|string|max:255',
+                'customer_name'  => 'required|string|max:255',
                 'customer_email' => 'required|email|max:255',
                 'customer_phone' => 'required|string|max:20',
-                'seats' => 'required|array',
+                'seats'          => 'required|array', 
             ]);
 
             // 1. Генерация кода
@@ -39,16 +39,16 @@ class ClientController extends Controller
                 $orderCode = str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT);
             } while (Ticket::where('ticket_code', $orderCode)->exists());
 
-            // 2. Использование транзакции, чтобы не создавались "битые" билеты
+            // 2. Использование транзакции
             DB::beginTransaction();
             try {
-                foreach ($data['seats'] as $seat) {
+                foreach ($data['seats'] as $seatData) {
                     Ticket::create([
                         'concert_id'     => $concert->id,
                         'ticket_code'    => $orderCode,
-                        'row'            => $seat['row'],
-                        'seat'           => $seat['seat'],
-                        'price'          => $seat['price'],
+                        'row'            => $seatData['row'], // Передаем номер ряда из JS
+                        'seat'           => $seatData['seat'], // Передаем номер места из JS
+                        'price'          => $seatData['price'],
                         'customer_name'  => $data['customer_name'],
                         'customer_email' => $data['customer_email'],
                         'customer_phone' => $data['customer_phone'],
@@ -58,7 +58,7 @@ class ClientController extends Controller
                 DB::commit();
             } catch (\Exception $e) {
                 DB::rollBack();
-                throw $e; // Пробрасываем дальше для логирования
+                throw $e;
             }
 
             // 3. Отправка письма
@@ -74,7 +74,6 @@ class ClientController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            // Если ошибка возникла, вернем сообщение в JSON, чтобы увидеть его в F12
             return response()->json([
                 'success' => false,
                 'message' => 'Ошибка: ' . $e->getMessage()

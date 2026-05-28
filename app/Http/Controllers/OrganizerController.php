@@ -57,7 +57,7 @@ class OrganizerController extends Controller
         ]);
 
         Concert::create([
-            'user_id'        => Auth::id(), // Этого достаточно для привязки организатора
+            'user_id'        => Auth::id(),
             'hall_id'        => $id,
             'title'          => $data['title'],
             'date_time'      => $data['date_time'],
@@ -83,25 +83,29 @@ class OrganizerController extends Controller
         return view('organizer.concert_view', compact('concert'));
     }
 
+    /**
+     * Обновленный метод для статуса мест
+     * Теперь возвращает ID места для соответствия новой структуре
+     */
     public function getSeatsStatus($id)
     {
         $concert = Concert::where('user_id', Auth::id())->findOrFail($id);
-        $tickets = Ticket::where('concert_id', $id)->get(['row', 'seat', 'status']);
+        // Получаем все билеты, привязанные к этому концерту
+        $tickets = Ticket::where('concert_id', $id)
+            ->get(['seat_id', 'status']); 
         
         return response()->json($tickets);
     }
 
-        public function ticketsSearch(Request $request) 
+    public function ticketsSearch(Request $request) 
     { 
         $concerts = Concert::where('user_id', Auth::id())->get();
         $selectedConcertId = $request->query('concert_id');
         $searchQuery = $request->query('search');
         
-        // Инициализируем пустую коллекцию
         $tickets = collect();
 
         if ($selectedConcertId) {
-            // Ищем билеты по концерту и фильтруем по поисковому запросу (например, номеру билета или имени)
             $query = Ticket::where('concert_id', $selectedConcertId);
             
             if ($searchQuery) {
@@ -117,11 +121,11 @@ class OrganizerController extends Controller
 
         return view('organizer.tickets_search', compact('concerts', 'selectedConcertId', 'searchQuery', 'tickets')); 
     }
+
     public function updateTicketStatus(Request $request, $id)
     {
         $ticket = Ticket::findOrFail($id);
 
-        // Проверка: принадлежит ли этот билет концерту, созданному текущим организатором
         if ($ticket->concert->user_id !== Auth::id()) {
             abort(403, 'У вас нет прав для изменения этого билета.');
         }
@@ -136,33 +140,34 @@ class OrganizerController extends Controller
 
         return back()->with('success', 'Статус билета успешно обновлен!');
     }
+
     public function calendar()
     {
-    return view('organizer.calendar');
+        return view('organizer.calendar');
     }
-    public function completedConcerts()
-{
-    // Получаем концерты, которые уже прошли
-    $concerts = Concert::where('date_time', '<', now())
-        ->with(['hall.partner', 'tickets']) // Предполагаем, что есть связь с билетами
-        ->get()
-        ->map(function ($concert) {
-            $sold = $concert->tickets->where('status', 'sold')->count();
-            $total = $concert->hall->capacity ?? 0;
-            $price = $concert->ticket_price ?? 0;
-            
-            return [
-                'id' => $concert->id,
-                'title' => $concert->title,
-                'hall' => $concert->hall->name ?? 'Без зала',
-                'partner' => $concert->hall->partner->company_name ?? 'Без площадки',
-                'date' => $concert->date_time,
-                'sold' => $sold,
-                'revenue' => $sold * $price,
-                'unsold' => max(0, $total - $sold)
-            ];
-        });
 
-    return view('organizer.completed', compact('concerts'));
-}
+    public function completedConcerts()
+    {
+        $concerts = Concert::where('date_time', '<', now())
+            ->with(['hall.partner', 'tickets'])
+            ->get()
+            ->map(function ($concert) {
+                $sold = $concert->tickets->where('status', 'sold')->count();
+                $total = $concert->hall->capacity ?? 0;
+                $price = $concert->ticket_price ?? 0;
+                
+                return [
+                    'id' => $concert->id,
+                    'title' => $concert->title,
+                    'hall' => $concert->hall->name ?? 'Без зала',
+                    'partner' => $concert->hall->partner->company_name ?? 'Без площадки',
+                    'date' => $concert->date_time,
+                    'sold' => $sold,
+                    'revenue' => $sold * $price,
+                    'unsold' => max(0, $total - $sold)
+                ];
+            });
+
+        return view('organizer.completed', compact('concerts'));
+    }
 }
