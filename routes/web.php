@@ -65,6 +65,9 @@ Route::prefix('partner')->name('partner.')->group(function () {
     Route::post('/hall/store', [PartnerController::class, 'storeHall'])->name('hall.store');
     Route::get('/hall/edit/{id}', [PartnerController::class, 'editHall'])->name('hall.edit');
     Route::post('/hall/update/{id}', [PartnerController::class, 'updateHall'])->name('hall.update');
+    
+    // МАРШРУТ ДЛЯ УДАЛЕНИЯ ЗАЛА
+    Route::delete('/hall/{id}', [PartnerController::class, 'destroy'])->name('hall.destroy');
 });
 
 // --- ПУБЛИЧНЫЕ МАРШРУТЫ (Клиенты) ---

@@ -25,14 +25,27 @@
                     <div>
                         <h3 class="text-xl font-bold text-zinc-900 mb-6 uppercase tracking-tight">{{ $concert->title }}</h3>
                         
-                        <div class="space-y-4 mb-8">
-                            <div class="flex justify-between items-center text-sm border-b border-zinc-50 pb-2">
-                                <span class="text-zinc-400 font-medium">Зал</span>
-                                <span class="font-bold text-zinc-900">{{ $concert->hall->name ?? 'Не указан' }}</span>
+                        <div class="space-y-6 mb-8">
+                            <div class="flex justify-between items-center border-b border-zinc-50 pb-2">
+                                <span class="text-zinc-400 font-medium text-sm">Зал</span>
+                                <span class="font-black text-zinc-900 text-[20px]">{{ $concert->hall->name ?? 'Не указан' }}</span>
                             </div>
-                            <div class="flex justify-between items-center text-sm border-b border-zinc-50 pb-2">
-                                <span class="text-zinc-400 font-medium">Дата</span>
-                                <span class="font-bold text-zinc-900 font-mono">
+                            
+                            {{-- Адрес и способ оплаты --}}
+                            <div class="flex flex-col border-b border-zinc-50 pb-2 space-y-3">
+                                <div class="flex flex-col">
+                                    <span class="text-zinc-400 font-medium text-[10px] uppercase">Адрес</span>
+                                    <span class="font-bold text-zinc-900 text-[20px]">{{ $concert->hall->address ?? 'Адрес не указан' }}</span>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-zinc-400 font-medium text-[10px] uppercase">Комментарий</span>
+                                    <span class="text-zinc-900 font-medium text-[20px]">{{ $concert->payment_info ?? 'Не указан' }}</span>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-between items-center border-b border-zinc-50 pb-2">
+                                <span class="text-zinc-400 font-medium text-sm">Дата</span>
+                                <span class="font-bold text-zinc-900 font-mono text-[20px]">
                                     {{ $concert->date_time ? \Carbon\Carbon::parse($concert->date_time)->format('d.m.Y H:i') : '—' }}
                                 </span>
                             </div>
@@ -41,11 +54,11 @@
                             <div class="grid grid-cols-2 gap-4 mt-6">
                                 <div class="bg-zinc-50 p-4 rounded-2xl">
                                     <div class="text-[10px] uppercase font-bold text-zinc-400">Продано</div>
-                                    <div class="text-lg font-black text-indigo-600">{{ $soldTickets }} <span class="text-xs text-zinc-300">/ {{ $totalPlaces }}</span></div>
+                                    <div class="text-[20px] font-black text-indigo-600">{{ $soldTickets }} <span class="text-xs text-zinc-300 font-normal">/ {{ $totalPlaces }}</span></div>
                                 </div>
                                 <div class="bg-zinc-50 p-4 rounded-2xl">
                                     <div class="text-[10px] uppercase font-bold text-zinc-400">Выручка</div>
-                                    <div class="text-lg font-black text-zinc-900">{{ number_format($totalEarnings, 0, ',', ' ') }} <span class="text-xs font-normal">₽</span></div>
+                                    <div class="text-[20px] font-black text-zinc-900">{{ number_format($totalEarnings, 0, ',', ' ') }} <span class="text-xs font-normal">₽</span></div>
                                 </div>
                             </div>
                         </div>

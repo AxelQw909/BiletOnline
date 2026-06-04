@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Ticket extends Model
 {
@@ -19,7 +20,10 @@ class Ticket extends Model
         'status'
     ];
 
-    public function concert()
+    /**
+     * Связь с концертом.
+     */
+    public function concert(): BelongsTo
     {
         return $this->belongsTo(Concert::class);
     }
@@ -28,7 +32,7 @@ class Ticket extends Model
      * Связь с конкретным местом в зале.
      * Теперь билет четко знает, какое именно место в базе он занимает.
      */
-    public function seat()
+    public function seat(): BelongsTo
     {
         return $this->belongsTo(Seat::class);
     }

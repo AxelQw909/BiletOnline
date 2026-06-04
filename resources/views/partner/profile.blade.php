@@ -41,6 +41,21 @@
 
         {{-- Секция залов --}}
         <div class="lg:col-span-3 space-y-8">
+            {{-- Блок вывода сообщений об ошибках или успехе --}}
+            @if (session('error'))
+                <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-r-xl" role="alert">
+                    <p class="font-bold uppercase text-xs tracking-widest mb-1">Ошибка</p>
+                    <p class="text-sm">{{ session('error') }}</p>
+                </div>
+            @endif
+
+            @if (session('success'))
+                <div class="bg-green-50 border-l-4 border-green-500 text-green-700 p-4 rounded-r-xl" role="alert">
+                    <p class="font-bold uppercase text-xs tracking-widest mb-1">Успешно</p>
+                    <p class="text-sm">{{ session('success') }}</p>
+                </div>
+            @endif
+
             <div class="flex justify-between items-center bg-white p-6 rounded-3xl border border-zinc-100 shadow-sm">
                 <h2 class="text-xl font-bold uppercase tracking-tight">Ваши залы</h2>
                 <a href="{{ route('partner.hall.create') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-6 py-3 uppercase font-bold tracking-widest rounded-xl transition-all active:scale-95">
@@ -66,10 +81,20 @@
                                 <div class="text-xl font-black text-zinc-900">{{ $hall->capacity }} <span class="text-xs font-normal text-zinc-500">мест</span></div>
                             </div>
 
-                            <a href="{{ route('partner.hall.edit', $hall->id) }}" 
-                               class="block text-center w-full border-2 border-zinc-900 text-zinc-900 hover:bg-zinc-900 hover:text-white py-3 rounded-xl text-xs uppercase font-bold tracking-wider transition-all">
-                                Редактировать
-                            </a>
+                            <div class="flex gap-2">
+                                <a href="{{ route('partner.hall.edit', $hall->id) }}" 
+                                   class="flex-1 text-center border-2 border-zinc-900 text-zinc-900 hover:bg-zinc-900 hover:text-white py-3 rounded-xl text-xs uppercase font-bold tracking-wider transition-all">
+                                    Редактировать
+                                </a>
+                                
+                                <form action="{{ route('partner.hall.destroy', $hall->id) }}" method="POST" onsubmit="return confirm('Вы уверены, что хотите удалить этот зал?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="bg-red-50 hover:bg-red-500 text-red-500 hover:text-white py-3 px-4 rounded-xl text-xs uppercase font-bold tracking-wider transition-all">
+                                        Удалить
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     @endforeach
                 </div>

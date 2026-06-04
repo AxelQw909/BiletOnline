@@ -10,7 +10,7 @@
         .bg-free { background-color: #ffffff; color: #18181b; border: 2px solid #e4e4e7; }
         .bg-booked { background-color: #f4f4f5; color: #a1a1aa; border: 2px solid #e4e4e7; cursor: not-allowed; }
         .bg-selected { background-color: #18181b !important; color: white !important; border-color: #18181b !important; }
-        .row-label { width: 40px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #71717a; font-size: 0.8rem; }
+        .row-label { min-width: 60px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #71717a; font-size: 0.75rem; text-transform: uppercase; }
     </style>
 </head>
 <body class="bg-zinc-50 text-zinc-900 min-h-screen">
@@ -20,8 +20,9 @@
         <div>
             <h1 class="text-4xl md:text-5xl font-extrabold uppercase tracking-tighter mb-4">{{ $concert->title }}</h1>
             <div class="flex flex-wrap gap-3">
-                <span class="px-4 py-2 bg-zinc-100 rounded-xl text-xs font-bold uppercase tracking-widest text-zinc-600">{{ \Carbon\Carbon::parse($concert->date_time)->format('d.m.Y в H:i') }}</span>
-                <span class="px-4 py-2 bg-indigo-50 rounded-xl text-xs font-bold uppercase tracking-widest text-indigo-700">{{ $concert->hall->address ?? 'Площадка не указана' }}</span>
+                <span class="px-4 py-2 bg-zinc-100 rounded-xl text-[15px] font-bold uppercase tracking-widest text-zinc-600">{{ \Carbon\Carbon::parse($concert->date_time)->format('d.m.Y в H:i') }}</span>
+                <span class="px-4 py-2 bg-indigo-50 rounded-xl text-[15px] font-bold uppercase tracking-widest text-indigo-700">{{ $concert->hall->address ?? 'Площадка не указана' }}</span>
+                <span class="px-4 py-2 bg-zinc-900 rounded-xl text-[15px] font-bold uppercase tracking-widest text-white">{{ $concert->payment_info ?? 'Способ оплаты не указан' }}</span>
             </div>
         </div>
         <div class="text-right border-l-4 border-zinc-900 pl-6">
@@ -33,9 +34,7 @@
     <div class="bg-white p-8 md:p-12 rounded-3xl border border-zinc-100 shadow-sm">
         <h2 class="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-10 text-center">Выберите места</h2>
         <div id="gridContainer" class="flex flex-col items-center gap-2 overflow-x-auto pb-4"></div>
-        <div class="mt-12 w-full max-w-2xl mx-auto h-6 bg-zinc-100 rounded-t-[50px] flex items-center justify-center">
-            <span class="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Сцена</span>
-        </div>
+        <div class="mt-12 w-full max-w-2xl mx-auto h-6 bg-zinc-100 rounded-t-[50px] flex items-center justify-center"></div>
     </div>
 
     <button id="btnContinue" disabled class="w-full bg-zinc-900 text-white py-6 uppercase font-bold text-lg tracking-[0.2em] shadow-lg disabled:bg-zinc-200 transition-all hover:bg-indigo-600 rounded-2xl cursor-pointer">
@@ -97,10 +96,11 @@
         concert.hall.rows.forEach(row => {
             const rowWrapper = document.createElement('div');
             rowWrapper.className = "flex items-center gap-2";
-            const label = document.createElement('div');
-            label.className = "row-label";
-            label.innerText = row.number;
-            rowWrapper.appendChild(label);
+            
+            const labelLeft = document.createElement('div');
+            labelLeft.className = "row-label";
+            labelLeft.innerText = "Ряд " + row.number;
+            rowWrapper.appendChild(labelLeft);
 
             const seatGroup = document.createElement('div');
             seatGroup.className = "flex gap-2";
@@ -115,6 +115,7 @@
                     const price = parseFloat(concert.base_price);
                     
                     const cell = document.createElement('div');
+                    cell.dataset.seatId = seat.id;
                     cell.className = `seat-cell rounded-xl cursor-pointer font-bold ${isBooked ? 'bg-booked' : 'bg-free hover:bg-zinc-100'}`;
                     cell.innerHTML = `<span class="text-lg">${seat.number}</span><span class="text-[10px] opacity-60">${price}₽</span>`;
                     
@@ -135,7 +136,7 @@
                 }
             });
             rowWrapper.appendChild(seatGroup);
-            rowWrapper.appendChild(label.cloneNode(true));
+            rowWrapper.appendChild(labelLeft.cloneNode(true));
             container.appendChild(rowWrapper);
         });
 
@@ -172,14 +173,22 @@
                         customer_name: e.target.customer_name.value,
                         customer_email: e.target.customer_email.value,
                         customer_phone: e.target.customer_phone.value,
-                        // Отправляем row и seat, которые требует ваша таблица в БД
-                        seats: selectedSeats.map(s => ({ row: s.row, seat: s.seat, price: s.price }))
+                        // Исправлено: теперь передаем seat_id для каждого места
+                        seats: selectedSeats.map(s => ({ seat_id: s.seat_id, row: s.row, seat: s.seat, price: s.price }))
                     })
                 });
 
                 const res = await response.json();
-
                 if(res.success) {
+                    selectedSeats.forEach(s => {
+                        const seatEl = document.querySelector(`[data-seat-id="${s.seat_id}"]`);
+                        if(seatEl) {
+                            seatEl.className = 'seat-cell rounded-xl font-bold bg-booked';
+                            const clone = seatEl.cloneNode(true);
+                            seatEl.parentNode.replaceChild(clone, seatEl);
+                        }
+                    });
+
                     document.getElementById('successMsg').classList.remove('hidden');
                     document.getElementById('formActions').classList.add('hidden');
                     document.getElementById('closeBtn').classList.remove('hidden');

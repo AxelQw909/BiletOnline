@@ -26,7 +26,6 @@ class ClientController extends Controller
     {
         try {
             $concert = Concert::findOrFail($id);
-            
             $data = $request->validate([
                 'customer_name'  => 'required|string|max:255',
                 'customer_email' => 'required|email|max:255',
@@ -34,20 +33,20 @@ class ClientController extends Controller
                 'seats'          => 'required|array', 
             ]);
 
-            // 1. Генерация кода
             do {
                 $orderCode = str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT);
             } while (Ticket::where('ticket_code', $orderCode)->exists());
 
-            // 2. Использование транзакции
             DB::beginTransaction();
             try {
                 foreach ($data['seats'] as $seatData) {
                     Ticket::create([
                         'concert_id'     => $concert->id,
+                        // Добавляем seat_id для привязки к конкретному месту в БД
+                        'seat_id'        => $seatData['seat_id'] ?? null, 
                         'ticket_code'    => $orderCode,
-                        'row'            => $seatData['row'], // Передаем номер ряда из JS
-                        'seat'           => $seatData['seat'], // Передаем номер места из JS
+                        'row'            => $seatData['row'], 
+                        'seat'           => $seatData['seat'], 
                         'price'          => $seatData['price'],
                         'customer_name'  => $data['customer_name'],
                         'customer_email' => $data['customer_email'],
@@ -61,7 +60,6 @@ class ClientController extends Controller
                 throw $e;
             }
 
-            // 3. Отправка письма
             try {
                 Mail::to($data['customer_email'])->send(new TicketCreated([$orderCode], $data['customer_name'], $concert));
             } catch (\Exception $e) {

@@ -26,6 +26,4 @@
             {{ $concert->payment_info ?? 'Нет комментариев' }}
         </p>
     </div>
-
-    <p style="margin-top: 20px; font-weight: bold;">Продиктуйте эти номера на кассе при входе.</p>
 </div>

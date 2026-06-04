@@ -59,16 +59,13 @@ class PartnerController extends Controller
         return view('partner.hall_create');
     }
 
-    /**
-     * Сохранение нового зала
-     */
     public function storeHall(Request $request)
     {
         $data = $request->validate([
             'name'     => 'required|string|max:255',
             'address'  => 'required|string|max:255',
             'capacity' => 'required|integer',
-            'schema'   => 'required|json', // Ожидаем JSON от фронтенда
+            'schema'   => 'required|json',
         ]);
 
         DB::transaction(function () use ($data) {
@@ -94,7 +91,7 @@ class PartnerController extends Controller
     }
 
     /**
-     * Редактирование зала (подгружаем ряды и места)
+     * Редактирование зала
      */
     public function editHall($id)
     {
@@ -123,8 +120,10 @@ class PartnerController extends Controller
                 'capacity' => $data['capacity'],
             ]);
 
-            // Удаляем старые ряды (каскадное удаление мест произойдет, если в миграции указано ON DELETE CASCADE)
-            // Если нет — лучше явно вызвать $hall->rows()->each(fn($r) => $r->seats()->delete());
+            // Явное удаление всех связанных мест и рядов перед обновлением
+            foreach ($hall->rows as $row) {
+                $row->seats()->delete();
+            }
             $hall->rows()->delete();
             
             $schema = json_decode($data['schema'], true);
@@ -140,4 +139,27 @@ class PartnerController extends Controller
 
         return redirect()->route('partner.profile')->with('success', 'Зал успешно обновлен');
     }
+
+    /**
+     * Удаление зала
+     */
+    public function destroy($id)
+{
+    $hall = Hall::where('user_id', Auth::id())->findOrFail($id);
+
+    // Проверяем, есть ли связанные концерты
+    if ($hall->concerts()->exists()) {
+        return back()->with('error', 'Этот зал нельзя удалить, так как он уже используется в одном или нескольких концертах.');
+    }
+
+    DB::transaction(function () use ($hall) {
+        foreach ($hall->rows as $row) {
+            $row->seats()->delete();
+        }
+        $hall->rows()->delete();
+        $hall->delete();
+    });
+
+    return redirect()->route('partner.profile')->with('success', 'Зал успешно удален');
+}
 }
