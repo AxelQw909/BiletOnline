@@ -27,6 +27,8 @@
     <div class="mt-8 pt-6 border-t border-zinc-200 flex flex-col gap-2 text-xs text-zinc-600">
         <a href="{{ route('register.partner') }}" class="hover:text-zinc-900 underline">Регистрация для Партнера</a>
         <a href="{{ route('register.organizer') }}" class="hover:text-zinc-900 underline">Регистрация для Организатора</a>
+        <br>
+        <a href="{{ route('password.request') }}" class="hover:text-zinc-900 underline block mb-2">Забыли пароль?</a>
     </div>
 </div>
 @endsection

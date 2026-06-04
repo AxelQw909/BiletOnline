@@ -80,7 +80,7 @@
                 <p><strong>Комментарий организатора:</strong></p>
                 <p class="text-zinc-600 italic">{{ $concert->payment_info ?? 'Нет комментариев' }}</p>
             </div>
-            <p class="text-2xl font-bold pt-4 border-t">Итого: <span id="summaryPrice"></span> ₽</p>
+            <p class="text-2xl font-bold pt-4 border-t">Итого: <span id="summaryPrice">0</span> ₽</p>
         </div>
     </div>
 </div>
@@ -88,6 +88,24 @@
 <script>
     document.addEventListener("DOMContentLoaded", () => {
         const concert = @json($concert);
+        
+        // --- ОБНОВЛЕННАЯ ЛОГИКА ВНЕДРЕНИЯ ЦЕН ---
+        const rawCustomPrices = {!! json_encode($concert->custom_prices) !!};
+        let customPrices = typeof rawCustomPrices === 'string' ? JSON.parse(rawCustomPrices) : rawCustomPrices;
+
+        if (customPrices && typeof customPrices === 'object') {
+            concert.hall.rows.forEach(row => {
+                row.seats.forEach(seat => {
+                    // Используем формат из базы данных: "seat-" + ID
+                    const key = 'seat-' + seat.id;
+                    if (customPrices[key]) {
+                        seat.price = parseFloat(customPrices[key]);
+                    }
+                });
+            });
+        }
+        // ----------------------------------------
+
         let selectedSeats = [];
         let timerInterval;
 
@@ -96,7 +114,6 @@
         concert.hall.rows.forEach(row => {
             const rowWrapper = document.createElement('div');
             rowWrapper.className = "flex items-center gap-2";
-            
             const labelLeft = document.createElement('div');
             labelLeft.className = "row-label";
             labelLeft.innerText = "Ряд " + row.number;
@@ -112,12 +129,12 @@
                     seatGroup.appendChild(aisle);
                 } else {
                     const isBooked = concert.tickets.find(t => t.seat_id == seat.id && t.status !== 'cancelled');
-                    const price = parseFloat(concert.base_price);
+                    const price = (seat.price && parseFloat(seat.price) > 0) ? parseFloat(seat.price) : parseFloat(concert.base_price);
                     
                     const cell = document.createElement('div');
                     cell.dataset.seatId = seat.id;
                     cell.className = `seat-cell rounded-xl cursor-pointer font-bold ${isBooked ? 'bg-booked' : 'bg-free hover:bg-zinc-100'}`;
-                    cell.innerHTML = `<span class="text-lg">${seat.number}</span><span class="text-[10px] opacity-60">${price}₽</span>`;
+                    cell.innerHTML = `<span class="text-lg">${seat.number}</span><span class="text-[10px] opacity-60">${price} ₽</span>`;
                     
                     if (!isBooked) {
                         cell.addEventListener('click', () => {
@@ -173,7 +190,6 @@
                         customer_name: e.target.customer_name.value,
                         customer_email: e.target.customer_email.value,
                         customer_phone: e.target.customer_phone.value,
-                        // Исправлено: теперь передаем seat_id для каждого места
                         seats: selectedSeats.map(s => ({ seat_id: s.seat_id, row: s.row, seat: s.seat, price: s.price }))
                     })
                 });

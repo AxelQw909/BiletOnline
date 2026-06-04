@@ -17,6 +17,7 @@
                 @php
                     $tickets = $concert->tickets ?? collect();
                     $soldTickets = $tickets->where('status', 'paid')->count();
+                    $bookedTickets = $tickets->where('status', 'pending')->count();
                     $totalEarnings = $tickets->where('status', 'paid')->sum('price');
                     $totalPlaces = $concert->hall->capacity ?? 0;
                 @endphp
@@ -51,14 +52,18 @@
                             </div>
                             
                             {{-- Блок статистики --}}
-                            <div class="grid grid-cols-2 gap-4 mt-6">
-                                <div class="bg-zinc-50 p-4 rounded-2xl">
-                                    <div class="text-[10px] uppercase font-bold text-zinc-400">Продано</div>
-                                    <div class="text-[20px] font-black text-indigo-600">{{ $soldTickets }} <span class="text-xs text-zinc-300 font-normal">/ {{ $totalPlaces }}</span></div>
+                            <div class="grid grid-cols-3 gap-2 mt-6">
+                                <div class="bg-zinc-50 p-3 rounded-2xl">
+                                    <div class="text-[9px] uppercase font-bold text-zinc-400">Продано</div>
+                                    <div class="text-[16px] font-black text-indigo-600">{{ $soldTickets }}</div>
                                 </div>
-                                <div class="bg-zinc-50 p-4 rounded-2xl">
-                                    <div class="text-[10px] uppercase font-bold text-zinc-400">Выручка</div>
-                                    <div class="text-[20px] font-black text-zinc-900">{{ number_format($totalEarnings, 0, ',', ' ') }} <span class="text-xs font-normal">₽</span></div>
+                                <div class="bg-yellow-50 p-3 rounded-2xl">
+                                    <div class="text-[9px] uppercase font-bold text-yellow-600">Бронь</div>
+                                    <div class="text-[16px] font-black text-yellow-900">{{ $bookedTickets }}</div>
+                                </div>
+                                <div class="bg-zinc-50 p-3 rounded-2xl">
+                                    <div class="text-[9px] uppercase font-bold text-zinc-400">Выручка</div>
+                                    <div class="text-[16px] font-black text-zinc-900">{{ number_format($totalEarnings, 0, ',', ' ') }} <span class="text-[10px] font-normal">₽</span></div>
                                 </div>
                             </div>
                         </div>

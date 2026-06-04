@@ -32,6 +32,9 @@ Route::prefix('organizer')->name('organizer.')->group(function () {
     // МАРШРУТ ДЛЯ СМЕНЫ СТАТУСА БИЛЕТА
     Route::post('/tickets/{id}/status', [OrganizerController::class, 'updateTicketStatus'])->name('tickets.status');
     
+    // МАРШРУТ ДЛЯ МАССОВОГО ОБНОВЛЕНИЯ СТАТУСА (ДОБАВЛЕНО)
+    Route::post('/tickets/bulk-status', [OrganizerController::class, 'bulkUpdateStatus'])->name('tickets.bulk.status');
+    
     // Аренда
     Route::get('/hall/rent/{id}', [OrganizerController::class, 'rentHall'])->name('hall.rent');
     Route::post('/hall/rent/{id}/submit', [OrganizerController::class, 'submitRent'])->name('hall.rent.submit');
@@ -76,3 +79,9 @@ Route::post('/concert/{id}/book', [ClientController::class, 'bookTicket'])->name
 
 // --- КАЛЕНДАРЬ ЗАНЯТОСТИ ---
 Route::get('/api/concerts', [CalendarController::class, 'getConcerts'])->name('api.concerts');
+
+// Восстановление пароля
+Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.request');
+Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->name('password.email');
+Route::get('/reset-password/{token}', [AuthController::class, 'showResetForm'])->name('password.reset');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');

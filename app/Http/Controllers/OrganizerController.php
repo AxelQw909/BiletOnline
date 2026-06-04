@@ -57,14 +57,14 @@ class OrganizerController extends Controller
         ]);
 
         Concert::create([
-            'user_id'        => Auth::id(),
-            'hall_id'        => $id,
-            'title'          => $data['title'],
-            'date_time'      => $data['date_time'],
+            'user_id'       => Auth::id(),
+            'hall_id'       => $id,
+            'title'         => $data['title'],
+            'date_time'     => $data['date_time'],
             'payment_info'   => $data['payment_info'], 
             'base_price'     => $data['base_price'],
             'custom_prices'  => isset($data['custom_prices']) ? json_decode($data['custom_prices'], true) : null,
-            'status'         => 'pending',
+            'status'        => 'pending',
         ]);
 
         return redirect()->route('organizer.profile')->with('success', 'Заявка на аренду отправлена!');
@@ -73,7 +73,10 @@ class OrganizerController extends Controller
     // --- ОСТАЛЬНЫЕ СТРАНИЦЫ ---
     public function concerts() 
     { 
-        $concerts = Concert::where('user_id', Auth::id())->where('status', 'approved')->get();
+        $concerts = Concert::where('user_id', Auth::id())
+                           ->where('status', 'approved')
+                           ->with('tickets') 
+                           ->get();
         return view('organizer.concerts', compact('concerts')); 
     }
 
@@ -83,14 +86,9 @@ class OrganizerController extends Controller
         return view('organizer.concert_view', compact('concert'));
     }
 
-    /**
-     * Обновленный метод для статуса мест
-     * Теперь возвращает ID места для соответствия новой структуре
-     */
     public function getSeatsStatus($id)
     {
         $concert = Concert::where('user_id', Auth::id())->findOrFail($id);
-        // Получаем все билеты, привязанные к этому концерту
         $tickets = Ticket::where('concert_id', $id)
             ->get(['seat_id', 'status']); 
         
@@ -139,6 +137,27 @@ class OrganizerController extends Controller
         ]);
 
         return back()->with('success', 'Статус билета успешно обновлен!');
+    }
+
+    // НОВЫЙ МЕТОД ДЛЯ МАССОВОГО ОБНОВЛЕНИЯ
+    public function bulkUpdateStatus(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:tickets,id'
+        ]);
+
+        // Проверка прав на все билеты
+        $tickets = Ticket::whereIn('id', $request->ids)->get();
+        foreach($tickets as $ticket) {
+            if ($ticket->concert->user_id !== Auth::id()) {
+                abort(403, 'У вас нет прав для изменения одного из билетов.');
+            }
+        }
+
+        Ticket::whereIn('id', $request->ids)->update(['status' => 'paid']);
+
+        return response()->json(['success' => true, 'message' => 'Статус билетов обновлен']);
     }
 
     public function calendar()

@@ -13,19 +13,19 @@ class TicketCreated extends Mailable
 {
     use Queueable, SerializesModels;
 
-    // Добавляем новые публичные свойства
-    public $ticketNumbers;
+    // Передаем коллекцию объектов билетов
+    public $tickets; 
     public $customerName;
-    public $concert; // Свойство для хранения данных о концерте
+    public $concert;
 
     /**
      * Create a new message instance.
      */
-    public function __construct($ticketNumbers, $customerName, $concert)
+    public function __construct($tickets, $customerName, $concert)
     {
-        $this->ticketNumbers = $ticketNumbers;
+        $this->tickets = $tickets; // Здесь ожидается результат запроса Ticket::where(...)->get()
         $this->customerName = $customerName;
-        $this->concert = $concert; // Присваиваем объект концерта
+        $this->concert = $concert;
     }
 
     /**
@@ -44,7 +44,6 @@ class TicketCreated extends Mailable
     public function content(): Content
     {
         return new Content(
-            // Убедитесь, что файл лежит именно по этому пути: resources/views/emails/ticket.blade.php
             view: 'emails.ticket', 
         );
     }

@@ -4,5 +4,5 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 class Seat extends Model {
-    protected $fillable = ['row_id', 'number', 'type'];
+    protected $fillable = ['row_id', 'number', 'type', 'price'];
 }

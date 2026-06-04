@@ -14,6 +14,7 @@ class ClientController extends Controller
 {
     public function show($id)
     {
+        // Убедитесь, что 'seats' содержит поле price в базе данных
         $concert = Concert::where('id', $id)
             ->where('status', 'approved')
             ->with(['hall.rows.seats', 'tickets']) 
@@ -37,22 +38,27 @@ class ClientController extends Controller
                 $orderCode = str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT);
             } while (Ticket::where('ticket_code', $orderCode)->exists());
 
+            $createdTickets = []; // Массив для сбора созданных объектов билетов
+
             DB::beginTransaction();
             try {
                 foreach ($data['seats'] as $seatData) {
-                    Ticket::create([
+                    $price = $seatData['price'] ?? $concert->base_price;
+
+                    $ticket = Ticket::create([
                         'concert_id'     => $concert->id,
-                        // Добавляем seat_id для привязки к конкретному месту в БД
                         'seat_id'        => $seatData['seat_id'] ?? null, 
                         'ticket_code'    => $orderCode,
                         'row'            => $seatData['row'], 
                         'seat'           => $seatData['seat'], 
-                        'price'          => $seatData['price'],
+                        'price'          => $price,
                         'customer_name'  => $data['customer_name'],
                         'customer_email' => $data['customer_email'],
                         'customer_phone' => $data['customer_phone'],
                         'status'         => 'pending'
                     ]);
+                    
+                    $createdTickets[] = $ticket; // Добавляем объект билета в массив
                 }
                 DB::commit();
             } catch (\Exception $e) {
@@ -60,8 +66,13 @@ class ClientController extends Controller
                 throw $e;
             }
 
+            // Отправляем коллекцию билетов в Mailable
             try {
-                Mail::to($data['customer_email'])->send(new TicketCreated([$orderCode], $data['customer_name'], $concert));
+                Mail::to($data['customer_email'])->send(new TicketCreated(
+                    collect($createdTickets), 
+                    $data['customer_name'], 
+                    $concert
+                ));
             } catch (\Exception $e) {
                 Log::error('Ошибка отправки письма: ' . $e->getMessage());
             }
