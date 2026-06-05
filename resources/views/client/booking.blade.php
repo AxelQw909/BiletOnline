@@ -2,15 +2,30 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Бронирование: {{ $concert->title }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .seat-cell { width: 70px; height: 70px; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        /* Адаптивные стили для схемы */
+        .seat-cell { 
+            width: 50px; height: 50px; /* Уменьшено для мобильных */
+            transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        }
+        @media (min-width: 768px) {
+            .seat-cell { width: 70px; height: 70px; }
+        }
         .bg-free { background-color: #ffffff; color: #18181b; border: 2px solid #e4e4e7; }
         .bg-booked { background-color: #f4f4f5; color: #a1a1aa; border: 2px solid #e4e4e7; cursor: not-allowed; }
         .bg-selected { background-color: #18181b !important; color: white !important; border-color: #18181b !important; }
-        .row-label { min-width: 60px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #71717a; font-size: 0.75rem; text-transform: uppercase; }
+        .row-label { min-width: 40px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #71717a; font-size: 0.65rem; text-transform: uppercase; }
+
+        /* Стили для зума на мобильных */
+        #zoomContainer { transform-origin: left top; transition: transform 0.1s ease-out; }
+        .mobile-zoom-btns { display: none; }
+        @media (max-width: 767px) {
+            .mobile-zoom-btns { display: flex; position: fixed; right: 20px; bottom: 100px; z-index: 40; flex-direction: column; gap: 10px; }
+            .zoom-btn { width: 50px; height: 50px; background: #18181b; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        }
     </style>
 </head>
 <body class="bg-zinc-50 text-zinc-900 min-h-screen">
@@ -31,15 +46,37 @@
         </div>
     </div>
 
-    <div class="bg-white p-8 md:p-12 rounded-3xl border border-zinc-100 shadow-sm">
-        <h2 class="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-10 text-center">Выберите места</h2>
-        <div id="gridContainer" class="flex flex-col items-center gap-2 overflow-x-auto pb-4"></div>
-        <div class="mt-12 w-full max-w-2xl mx-auto h-6 bg-zinc-100 rounded-t-[50px] flex items-center justify-center"></div>
+    <div class="flex flex-col lg:flex-row gap-8 items-start">
+        <div class="flex-1 w-full bg-white p-8 md:p-12 rounded-3xl border border-zinc-100 shadow-sm">
+            <h2 class="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-10 text-center">Выберите места</h2>
+            
+            <div class="w-full overflow-auto touch-pan-x pb-4 border-2 border-zinc-50 rounded-2xl" id="viewport">
+                <div id="zoomContainer" class="inline-block px-10 py-10">
+                    <div id="gridContainer" class="flex flex-col items-center gap-2"></div>
+                </div>
+            </div>
+
+            <div class="mt-12 w-full max-w-2xl mx-auto h-6 bg-zinc-100 rounded-t-[50px] flex items-center justify-center"></div>
+        </div>
+
+        <div class="w-full lg:w-80 bg-white p-8 rounded-3xl border border-zinc-100 shadow-sm lg:sticky lg:top-10">
+            <h3 class="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-6">Ваш выбор</h3>
+            <div id="sidebarSeatsList" class="space-y-2 mb-6 text-sm text-zinc-600">
+                <p>Места не выбраны</p>
+            </div>
+            <div class="border-t pt-6 mb-6">
+                <p class="text-2xl font-black">Итого: <span id="sidebarTotal">0</span> ₽</p>
+            </div>
+            <button id="btnContinue" disabled class="w-full bg-zinc-900 text-white py-4 uppercase font-bold text-sm tracking-[0.2em] shadow-lg disabled:bg-zinc-200 transition-all hover:bg-indigo-600 rounded-2xl cursor-pointer">
+                Продолжить оформление
+            </button>
+        </div>
     </div>
 
-    <button id="btnContinue" disabled class="w-full bg-zinc-900 text-white py-6 uppercase font-bold text-lg tracking-[0.2em] shadow-lg disabled:bg-zinc-200 transition-all hover:bg-indigo-600 rounded-2xl cursor-pointer">
-        Продолжить оформление
-    </button>
+    <div class="mobile-zoom-btns">
+        <button id="btnZoomIn" class="zoom-btn">+</button>
+        <button id="btnZoomOut" class="zoom-btn">-</button>
+    </div>
 </div>
 
 <div id="modal" class="fixed inset-0 bg-black/30 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
@@ -87,28 +124,41 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
+        let currentScale = 1;
+        const zoomContainer = document.getElementById('zoomContainer');
+        const btnIn = document.getElementById('btnZoomIn');
+        const btnOut = document.getElementById('btnZoomOut');
+
+        const updateSidebar = () => {
+            const list = document.getElementById('sidebarSeatsList');
+            const total = document.getElementById('sidebarTotal');
+            if (selectedSeats.length === 0) {
+                list.innerHTML = '<p>Места не выбраны</p>';
+                total.innerText = '0';
+            } else {
+                list.innerHTML = selectedSeats.map(s => `<p>Ряд ${s.row}, Место ${s.seat}</p>`).join('');
+                total.innerText = selectedSeats.reduce((sum, s) => sum + s.price, 0);
+            }
+        };
+
+        btnIn.addEventListener('click', () => { currentScale = Math.min(currentScale + 0.2, 2.0); zoomContainer.style.transform = `scale(${currentScale})`; });
+        btnOut.addEventListener('click', () => { currentScale = Math.max(currentScale - 0.2, 0.5); zoomContainer.style.transform = `scale(${currentScale})`; });
+
         const concert = @json($concert);
-        
-        // --- ОБНОВЛЕННАЯ ЛОГИКА ВНЕДРЕНИЯ ЦЕН ---
         const rawCustomPrices = {!! json_encode($concert->custom_prices) !!};
         let customPrices = typeof rawCustomPrices === 'string' ? JSON.parse(rawCustomPrices) : rawCustomPrices;
 
         if (customPrices && typeof customPrices === 'object') {
             concert.hall.rows.forEach(row => {
                 row.seats.forEach(seat => {
-                    // Используем формат из базы данных: "seat-" + ID
                     const key = 'seat-' + seat.id;
-                    if (customPrices[key]) {
-                        seat.price = parseFloat(customPrices[key]);
-                    }
+                    if (customPrices[key]) seat.price = parseFloat(customPrices[key]);
                 });
             });
         }
-        // ----------------------------------------
 
         let selectedSeats = [];
         let timerInterval;
-
         const container = document.getElementById('gridContainer');
         
         concert.hall.rows.forEach(row => {
@@ -125,7 +175,7 @@
             row.seats.forEach(seat => {
                 if (seat.type === 'aisle') {
                     const aisle = document.createElement('div');
-                    aisle.className = "w-[70px] h-[70px]";
+                    aisle.className = "w-[50px] md:w-[70px] h-[50px] md:h-[70px]";
                     seatGroup.appendChild(aisle);
                 } else {
                     const isBooked = concert.tickets.find(t => t.seat_id == seat.id && t.status !== 'cancelled');
@@ -134,7 +184,7 @@
                     const cell = document.createElement('div');
                     cell.dataset.seatId = seat.id;
                     cell.className = `seat-cell rounded-xl cursor-pointer font-bold ${isBooked ? 'bg-booked' : 'bg-free hover:bg-zinc-100'}`;
-                    cell.innerHTML = `<span class="text-lg">${seat.number}</span><span class="text-[10px] opacity-60">${price} ₽</span>`;
+                    cell.innerHTML = `<span class="text-sm md:text-lg">${seat.number}</span><span class="text-[8px] md:text-[10px] opacity-60">${price} ₽</span>`;
                     
                     if (!isBooked) {
                         cell.addEventListener('click', () => {
@@ -147,6 +197,7 @@
                                 cell.classList.add('bg-selected');
                             }
                             document.getElementById('btnContinue').disabled = selectedSeats.length === 0;
+                            updateSidebar();
                         });
                     }
                     seatGroup.appendChild(cell);
@@ -198,13 +249,8 @@
                 if(res.success) {
                     selectedSeats.forEach(s => {
                         const seatEl = document.querySelector(`[data-seat-id="${s.seat_id}"]`);
-                        if(seatEl) {
-                            seatEl.className = 'seat-cell rounded-xl font-bold bg-booked';
-                            const clone = seatEl.cloneNode(true);
-                            seatEl.parentNode.replaceChild(clone, seatEl);
-                        }
+                        if(seatEl) seatEl.className = 'seat-cell rounded-xl font-bold bg-booked';
                     });
-
                     document.getElementById('successMsg').classList.remove('hidden');
                     document.getElementById('formActions').classList.add('hidden');
                     document.getElementById('closeBtn').classList.remove('hidden');

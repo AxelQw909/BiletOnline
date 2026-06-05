@@ -34,21 +34,33 @@
                                         <div>
                                             <div class="font-bold text-lg text-zinc-900 mb-0.5">{{ $hall->name }}</div>
                                             <div class="text-xs text-zinc-500 mb-4">Адрес: {{ $hall->address }}</div>
-                                            <div class="inline-flex items-center px-3 py-1 rounded-full bg-white border border-zinc-200 text-xs font-semibold text-zinc-700 mb-4">
-                                                {{ $hall->capacity }} мест
-                                            </div>
+                                            
+                                            @if($hall->status === 'maintenance')
+                                                <div class="inline-flex items-center px-3 py-1 rounded-full bg-red-50 border border-red-200 text-xs font-bold text-red-600 mb-4">
+                                                    На техническом обслуживании
+                                                </div>
+                                            @else
+                                                <div class="inline-flex items-center px-3 py-1 rounded-full bg-white border border-zinc-200 text-xs font-semibold text-zinc-700 mb-4">
+                                                    {{ $hall->capacity }} мест
+                                                </div>
+                                            @endif
                                         </div>
                                         
                                         <div class="mt-4 flex flex-col gap-2">
-                                            <a href="{{ route('organizer.hall.rent', $hall->id) }}" 
-                                               class="block w-full py-3 rounded-xl bg-zinc-900 text-white text-center font-bold text-xs uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95">
-                                                Арендовать
-                                            </a>
-                                            {{-- Используем json_encode для надежной передачи данных --}}
-                                            <button onclick="openModal('{{ addslashes($hall->name) }}', {{ $hall->rows->load('seats')->toJson() }}, '{{ route('organizer.hall.rent', $hall->id) }}')" 
-                                                    class="block w-full py-3 rounded-xl bg-zinc-100 text-zinc-900 text-center font-bold text-xs uppercase tracking-widest hover:bg-zinc-200 transition-all active:scale-95">
-                                                Посмотреть схему
-                                            </button>
+                                            @if($hall->status === 'maintenance')
+                                                <button disabled class="block w-full py-3 rounded-xl bg-zinc-200 text-zinc-500 text-center font-bold text-xs uppercase cursor-not-allowed">
+                                                    Закрыт
+                                                </button>
+                                            @else
+                                                <a href="{{ route('organizer.hall.rent', $hall->id) }}" 
+                                                   class="block w-full py-3 rounded-xl bg-zinc-900 text-white text-center font-bold text-xs uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95">
+                                                    Арендовать
+                                                </a>
+                                                <button onclick="openModal('{{ addslashes($hall->name) }}', {{ $hall->rows->load('seats')->toJson() }}, '{{ route('organizer.hall.rent', $hall->id) }}')" 
+                                                        class="block w-full py-3 rounded-xl bg-zinc-100 text-zinc-900 text-center font-bold text-xs uppercase tracking-widest hover:bg-zinc-200 transition-all active:scale-95">
+                                                    Посмотреть схему
+                                                </button>
+                                            @endif
                                         </div>
                                     </div>
                                 @endforeach
@@ -77,7 +89,6 @@
 
 <script>
     function openModal(name, rows, rentUrl) {
-        console.log('Opening modal for:', name, rows);
         document.getElementById('modalTitle').innerText = 'Схема: ' + name;
         document.getElementById('btnRent').href = rentUrl;
         const container = document.getElementById('modalContent');

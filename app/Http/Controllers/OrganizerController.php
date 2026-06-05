@@ -38,7 +38,8 @@ class OrganizerController extends Controller
 
     public function rentHall($id)
     {
-        $hall = Hall::findOrFail($id);
+        // Добавлена связь with('user') для доступа к $hall->user->phone
+        $hall = Hall::with('user')->findOrFail($id);
         $bookedDates = Concert::where('hall_id', $id)
                             ->where('status', 'approved')
                             ->pluck('date_time')
@@ -61,13 +62,14 @@ class OrganizerController extends Controller
             'hall_id'       => $id,
             'title'         => $data['title'],
             'date_time'     => $data['date_time'],
-            'payment_info'   => $data['payment_info'], 
-            'base_price'     => $data['base_price'],
-            'custom_prices'  => isset($data['custom_prices']) ? json_decode($data['custom_prices'], true) : null,
+            'payment_info'  => $data['payment_info'], 
+            'base_price'    => $data['base_price'],
+            'custom_prices' => isset($data['custom_prices']) ? json_decode($data['custom_prices'], true) : null,
             'status'        => 'pending',
         ]);
 
-        return redirect()->route('organizer.profile')->with('success', 'Заявка на аренду отправлена!');
+        // Возвращаем JSON для корректной работы AJAX в модальном окне
+        return response()->json(['success' => true]);
     }
 
     // --- ОСТАЛЬНЫЕ СТРАНИЦЫ ---
@@ -139,7 +141,6 @@ class OrganizerController extends Controller
         return back()->with('success', 'Статус билета успешно обновлен!');
     }
 
-    // НОВЫЙ МЕТОД ДЛЯ МАССОВОГО ОБНОВЛЕНИЯ
     public function bulkUpdateStatus(Request $request)
     {
         $request->validate([
@@ -147,7 +148,6 @@ class OrganizerController extends Controller
             'ids.*' => 'exists:tickets,id'
         ]);
 
-        // Проверка прав на все билеты
         $tickets = Ticket::whereIn('id', $request->ids)->get();
         foreach($tickets as $ticket) {
             if ($ticket->concert->user_id !== Auth::id()) {
@@ -168,7 +168,7 @@ class OrganizerController extends Controller
     public function completedConcerts()
     {
         $concerts = Concert::where('date_time', '<', now())
-            ->with(['hall.partner', 'tickets'])
+            ->with(['hall.user', 'tickets'])
             ->get()
             ->map(function ($concert) {
                 $sold = $concert->tickets->where('status', 'sold')->count();
@@ -179,7 +179,7 @@ class OrganizerController extends Controller
                     'id' => $concert->id,
                     'title' => $concert->title,
                     'hall' => $concert->hall->name ?? 'Без зала',
-                    'partner' => $concert->hall->partner->company_name ?? 'Без площадки',
+                    'partner' => $concert->hall->user->company_name ?? 'Без площадки',
                     'date' => $concert->date_time,
                     'sold' => $sold,
                     'revenue' => $sold * $price,

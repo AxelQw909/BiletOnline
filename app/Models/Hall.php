@@ -6,19 +6,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class Hall extends Model
 {
-    // Убрали 'schema' из $fillable, так как колонки больше нет
-    protected $fillable = ['user_id', 'name', 'address', 'capacity'];
-
-    // Убрали protected $casts для 'schema', так как этого поля больше нет
+    // Добавили 'status' в $fillable, чтобы можно было сохранять его через контроллер
+    protected $fillable = ['user_id', 'name', 'address', 'capacity', 'status'];
 
     public function partner()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    // Связь с рядами (теперь это основной способ получения данных о месте)
+    // Связь с рядами
     public function rows() 
     { 
         return $this->hasMany(Row::class); 
+    }
+
+    public function user()
+    {
+        // Предполагается, что в таблице halls есть поле user_id
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

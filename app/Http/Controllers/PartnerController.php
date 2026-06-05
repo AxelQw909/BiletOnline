@@ -24,6 +24,38 @@ class PartnerController extends Controller
     }
 
     /**
+     * Просмотр аренд конкретного зала
+     */
+    public function hallRentals($id)
+    {
+        // Проверяем, что зал принадлежит текущему партнеру
+        $hall = Hall::where('user_id', Auth::id())->findOrFail($id);
+
+        // Получаем концерты, связанные с этим залом
+        $concerts = Concert::where('hall_id', $hall->id)
+            ->with('organizer') 
+            ->get();
+
+        return view('partner.hall_rentals', compact('hall', 'concerts'));
+    }
+
+    /**
+     * Обновление статуса зала (Рабочий / Тех. обслуживание)
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $hall = Hall::where('user_id', Auth::id())->findOrFail($id);
+        
+        $request->validate([
+            'status' => 'required|in:active,maintenance'
+        ]);
+
+        $hall->update(['status' => $request->status]);
+
+        return back()->with('success', 'Статус зала успешно изменен!');
+    }
+
+    /**
      * Страница заявок
      */
     public function requests()
@@ -34,7 +66,7 @@ class PartnerController extends Controller
         return view('partner.requests', compact('concerts'));
     }
 
-    public function updateStatus(Request $request, $id)
+    public function updateConcertStatus(Request $request, $id)
     {
         $concert = Concert::findOrFail($id);
         $request->validate(['status' => 'required|in:approved,rejected']);
@@ -74,6 +106,7 @@ class PartnerController extends Controller
                 'name'     => $data['name'],
                 'address'  => $data['address'],
                 'capacity' => $data['capacity'],
+                'status'   => 'active',
             ]);
 
             $schema = json_decode($data['schema'], true);
@@ -120,7 +153,6 @@ class PartnerController extends Controller
                 'capacity' => $data['capacity'],
             ]);
 
-            // Явное удаление всех связанных мест и рядов перед обновлением
             foreach ($hall->rows as $row) {
                 $row->seats()->delete();
             }
@@ -144,22 +176,21 @@ class PartnerController extends Controller
      * Удаление зала
      */
     public function destroy($id)
-{
-    $hall = Hall::where('user_id', Auth::id())->findOrFail($id);
+    {
+        $hall = Hall::where('user_id', Auth::id())->findOrFail($id);
 
-    // Проверяем, есть ли связанные концерты
-    if ($hall->concerts()->exists()) {
-        return back()->with('error', 'Этот зал нельзя удалить, так как он уже используется в одном или нескольких концертах.');
-    }
-
-    DB::transaction(function () use ($hall) {
-        foreach ($hall->rows as $row) {
-            $row->seats()->delete();
+        if ($hall->concerts()->exists()) {
+            return back()->with('error', 'Этот зал нельзя удалить, так как он уже используется в одном или нескольких концертах.');
         }
-        $hall->rows()->delete();
-        $hall->delete();
-    });
 
-    return redirect()->route('partner.profile')->with('success', 'Зал успешно удален');
-}
+        DB::transaction(function () use ($hall) {
+            foreach ($hall->rows as $row) {
+                $row->seats()->delete();
+            }
+            $hall->rows()->delete();
+            $hall->delete();
+        });
+
+        return redirect()->route('partner.profile')->with('success', 'Зал успешно удален');
+    }
 }

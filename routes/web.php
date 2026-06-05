@@ -6,7 +6,7 @@ use App\Http\Controllers\OrganizerController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CalendarController;
-use App\Http\Controllers\ReportController; // Добавлен импорт
+use App\Http\Controllers\ReportController;
 
 // --- АВТОРИЗАЦИЯ И ГЛАВНАЯ ---
 Route::get('/', [AuthController::class, 'showLogin'])->name('login');
@@ -55,13 +55,12 @@ Route::prefix('organizer')->name('organizer.')->group(function () {
 Route::prefix('partner')->name('partner.')->group(function () {
     Route::get('/profile', [PartnerController::class, 'profile'])->name('profile');
     
-    // ИСПРАВЛЕНИЕ: убрал дублирующий префикс 'partner.' из имени
     Route::post('/profile/update/{id}', [PartnerController::class, 'update'])->name('profile.update');
     
     Route::get('/requests', [PartnerController::class, 'requests'])->name('requests');
     
     // Статус заявки
-    Route::post('/requests/{id}/status', [PartnerController::class, 'updateStatus'])->name('requests.status');
+    Route::post('/requests/{id}/status', [PartnerController::class, 'updateConcertStatus'])->name('requests.status');
     
     // Работа с залами
     Route::get('/hall/create', [PartnerController::class, 'createHall'])->name('hall.create');
@@ -69,8 +68,13 @@ Route::prefix('partner')->name('partner.')->group(function () {
     Route::get('/hall/edit/{id}', [PartnerController::class, 'editHall'])->name('hall.edit');
     Route::post('/hall/update/{id}', [PartnerController::class, 'updateHall'])->name('hall.update');
     
+    // МАРШРУТ ДЛЯ ОБНОВЛЕНИЯ СТАТУСА ЗАЛА
+    Route::post('/hall/{id}/status', [PartnerController::class, 'updateStatus'])->name('hall.update_status');
+    
     // МАРШРУТ ДЛЯ УДАЛЕНИЯ ЗАЛА
     Route::delete('/hall/{id}', [PartnerController::class, 'destroy'])->name('hall.destroy');
+
+    Route::get('/hall/{id}/rentals', [PartnerController::class, 'hallRentals'])->name('hall.rentals');
 });
 
 // --- ПУБЛИЧНЫЕ МАРШРУТЫ (Клиенты) ---

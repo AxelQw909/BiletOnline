@@ -43,10 +43,18 @@
     </header>
 
     <main class="flex-grow w-full px-4 sm:px-8 py-8">
+        {{-- Зеленое уведомление об успехе --}}
         @if(session('success'))
-            <div class="mb-6 p-4 bg-zinc-900 text-white text-sm rounded-none flex justify-between items-center">
-                <span>{{ session('success') }}</span>
-                <button onclick="this.parentElement.remove()" class="text-zinc-400 hover:text-white cursor-pointer">&times;</button>
+            <div class="mb-8 bg-white border-l-4 border-emerald-500 p-6 rounded-2xl shadow-sm flex items-center gap-4" role="alert">
+                <div class="bg-emerald-100 p-2 rounded-full text-emerald-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="font-bold uppercase text-xs tracking-widest text-emerald-700 mb-1">Успешно</p>
+                    <p class="text-sm text-zinc-700 font-medium">{{ session('success') }}</p>
+                </div>
             </div>
         @endif
 
