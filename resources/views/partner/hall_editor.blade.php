@@ -10,7 +10,6 @@
     </header>
 
     <script>
-        // Передаем структуру рядов и мест из БД в JavaScript
         const initialData = @json(isset($hall) ? $hall->rows : []);
     </script>
 
@@ -30,6 +29,21 @@
                 <div>
                     <label class="block text-xs uppercase font-bold text-zinc-400 mb-2">Количество мест</label>
                     <input type="number" name="capacity" id="hallCapacity" value="{{ $hall->capacity ?? 0 }}" readonly class="w-full border border-zinc-100 p-3 rounded-xl text-sm bg-zinc-50 font-black text-indigo-600 focus:outline-none">
+                </div>
+
+                <div class="pt-6 border-t border-zinc-100 space-y-4">
+                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Генератор сетки</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] uppercase text-zinc-400 mb-1">Рядов</label>
+                            <input type="number" id="inputRows" min="1" max="40" class="w-full border border-zinc-200 p-2 rounded-lg text-sm focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase text-zinc-400 mb-1">Мест в ряду</label>
+                            <input type="number" id="inputSeats" min="1" max="40" class="w-full border border-zinc-200 p-2 rounded-lg text-sm focus:outline-none">
+                        </div>
+                    </div>
+                    <button type="button" onclick="rebuildGrid()" class="w-full bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-xs py-3 uppercase font-bold rounded-xl transition cursor-pointer">Пересоздать сетку</button>
                 </div>
 
                 <input type="hidden" name="schema" id="schemaInput">
@@ -57,36 +71,60 @@
 
     document.addEventListener("DOMContentLoaded", function() {
         if (initialData.length > 0) {
+            document.getElementById('inputRows').value = initialData.length;
+            document.getElementById('inputSeats').value = initialData[0].seats.length;
+            
             initialData.forEach(r => {
                 r.seats.forEach(s => {
-                    // Собираем плоский массив для логики рендера
                     hallSchema.push({ row: r.number, seat: s.number, type: s.type });
                 });
             });
             renderGrid();
+        } else {
+            document.getElementById('inputRows').value = 10;
+            document.getElementById('inputSeats').value = 12;
+            rebuildGrid();
         }
     });
 
+    function rebuildGrid() {
+        const rows = parseInt(document.getElementById('inputRows').value) || 10;
+        const seats = parseInt(document.getElementById('inputSeats').value) || 12;
+        hallSchema = [];
+        for (let r = 1; r <= rows; r++) {
+            for (let s = 1; s <= seats; s++) {
+                hallSchema.push({ row: r, seat: s, type: 'seat' });
+            }
+        }
+        renderGrid();
+    }
+
     function renderGrid() {
         const container = document.getElementById('editorContainer');
+        const rows = parseInt(document.getElementById('inputRows').value);
+        const cols = parseInt(document.getElementById('inputSeats').value);
+        
         container.innerHTML = '';
-        
-        const rowNums = [...new Set(hallSchema.map(i => i.row))].sort((a,b) => a - b);
-        const maxCols = Math.max(...hallSchema.map(i => i.seat));
-        
-        container.style.gridTemplateColumns = `48px repeat(${maxCols}, minmax(56px, 1fr))`;
+        container.style.gridTemplateColumns = `48px repeat(${cols}, minmax(56px, 1fr))`;
 
-        rowNums.forEach(rNum => {
+        for (let r = 1; r <= rows; r++) {
             const rowLabel = document.createElement('div');
             rowLabel.className = "flex items-center justify-center font-bold text-zinc-400 w-12 text-[10px] uppercase tracking-wider";
-            rowLabel.innerText = "Ряд " + rNum;
+            rowLabel.innerText = "Ряд " + r;
             container.appendChild(rowLabel);
 
-            hallSchema.filter(i => i.row === rNum).forEach(item => {
-                const cell = document.createElement('div');
+            for (let s = 1; s <= cols; s++) {
+                let item = hallSchema.find(i => i.row === r && i.seat === s);
                 
+                // Если при изменении размеров появились новые ячейки, создаем их
+                if (!item) {
+                    item = { row: r, seat: s, type: 'seat' };
+                    hallSchema.push(item);
+                }
+
+                const cell = document.createElement('div');
                 cell.className = "h-14 w-14 rounded-xl flex items-center justify-center cursor-pointer transition-all border-2 " + 
-                                (item.type === 'seat' 
+                                 (item.type === 'seat' 
                                  ? "bg-zinc-900 border-zinc-900 text-white shadow-sm hover:bg-indigo-600 hover:border-indigo-600" 
                                  : "bg-white border-zinc-200 text-zinc-300");
                 
@@ -97,8 +135,8 @@
                     renderGrid();
                 });
                 container.appendChild(cell);
-            });
-        });
+            }
+        }
         
         document.getElementById('hallCapacity').value = hallSchema.filter(i => i.type === 'seat').length;
         document.getElementById('schemaInput').value = JSON.stringify(hallSchema);
