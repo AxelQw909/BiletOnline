@@ -13,7 +13,7 @@
     <div style="margin: 20px 0;">
         {{-- Номер заказа один для всей группы --}}
         <div style="margin-bottom: 15px;">
-            <span style="font-size: 16px; color: #4b5563;">Номер заказа:</span>
+            <span style="font-size: 16px; color: #4b5563;">Номер заказа: </span>
             <span style="font-size: 22px; font-weight: bold; color: #18181b; display: block;"># {{ $tickets->first()->ticket_code }}</span>
         </div>
 
